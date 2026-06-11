@@ -1,0 +1,76 @@
+{
+    "name": "Ace Technologies - IT & Security Solutions",
+    "short_name": "Ace Technologies",
+    "start_url": "./",
+    "display": "standalone",
+    "scope": "/",
+    "background_color": "#f5f7fa",
+    "theme_color": "#00897B",
+    "description": "Premier IT & Security Solutions Platform - Expert consulting, cutting-edge products, and professional services.",
+    "orientation": "any",
+    "prefer_related_applications": false,
+    "screenshots": [
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "form_factor": "wide"
+        },
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "form_factor": "narrow"
+        }
+    ],
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ],
+    "categories": ["business", "productivity", "shopping"],
+    "shortcuts": [
+        {
+            "name": "Shop Products",
+            "short_name": "Products",
+            "description": "Browse our IT and Security products",
+            "url": "/products",
+            "icons": [{"src": "icons/Icon-192.png", "sizes": "192x192"}]
+        },
+        {
+            "name": "Our Services",
+            "short_name": "Services",
+            "description": "Explore professional IT services",
+            "url": "/services",
+            "icons": [{"src": "icons/Icon-192.png", "sizes": "192x192"}]
+        },
+        {
+            "name": "My Account",
+            "short_name": "Account",
+            "description": "Manage your account and orders",
+            "url": "/account",
+            "icons": [{"src": "icons/Icon-192.png", "sizes": "192x192"}]
+        }
+    ]
+}
