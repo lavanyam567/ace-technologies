@@ -548,6 +548,13 @@ async function main() {
     if (server) await new Promise((resolve) => server.close(resolve));
     writeReport(results, cases);
     console.log(`Report written: ${REPORT_PATH}`);
+    try {
+      const { execSync } = require('child_process');
+      console.log('Generating Markdown summary...');
+      execSync(`node "${path.resolve(__dirname, '../../scripts/generate-markdown-summary.js')}"`, { stdio: 'inherit' });
+    } catch (err) {
+      console.error('Failed to generate Markdown summary:', err.message);
+    }
   }
 
   if (results.some((r) => r.status === 'FAIL')) process.exitCode = 1;

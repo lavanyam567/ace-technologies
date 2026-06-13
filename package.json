@@ -8,6 +8,7 @@
     "xlsx": "^0.18.5"
   },
   "scripts": {
-    "test:e2e": "node tests/e2e/selenium-e2e.js"
+    "test:e2e": "node tests/e2e/selenium-e2e.js",
+    "summary": "node scripts/generate-markdown-summary.js"
   }
 }

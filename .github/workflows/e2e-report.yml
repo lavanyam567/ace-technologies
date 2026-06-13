@@ -68,5 +68,15 @@ jobs:
           path: |
             reports/*.xlsx
             reports/evidence/**
+            TEST_SUMMARY.md
           if-no-files-found: warn
           retention-days: 14
+
+      - name: Publish Test Summary to Job Summary
+        if: always()
+        run: |
+          if [ -f TEST_SUMMARY.md ]; then
+            cat TEST_SUMMARY.md >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ⚠️ TEST_SUMMARY.md was not generated!" >> $GITHUB_STEP_SUMMARY
+          fi

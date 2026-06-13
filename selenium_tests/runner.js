@@ -285,7 +285,16 @@ async function main() {
   console.log(`     ✅ Passed    : ${totalPassed}`);
   console.log(`     ❌ Failed    : ${totalFailed}`);
   console.log(`     Pass Rate    : ${allResults.length ? Math.round(totalPassed / allResults.length * 100) : 0}%`);
-  if (reportPath) console.log(`     📁 Report    : ${reportPath}`);
+  if (reportPath) {
+    console.log(`     📁 Report    : ${reportPath}`);
+    try {
+      const { execSync } = require('child_process');
+      console.log('     📝 Generating Markdown summary...');
+      execSync(`node "${path.resolve(__dirname, '../scripts/generate-markdown-summary.js')}"`, { stdio: 'inherit' });
+    } catch (err) {
+      console.error('     ❌ Failed to generate Markdown summary:', err.message);
+    }
+  }
   console.log('═'.repeat(70) + '\n');
 
   if (totalFailed > 0) process.exitCode = 1;
