@@ -7,7 +7,6 @@ import '../../widgets/product_card.dart';
 import '../../widgets/category_item.dart';
 import '../../widgets/service_card.dart';
 import '../../widgets/login_card.dart';
-import '../chatbot/widgets/chat_fab.dart';
 import '../products/providers/product_providers.dart';
 import '../providers/cart_provider.dart';
 import '../services/providers/service_providers.dart';
@@ -43,10 +42,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      floatingActionButton: const Padding(
-        padding: EdgeInsets.only(bottom: 8),
-        child: ChatFab(),
-      ),
       body: CustomScrollView(
         slivers: [
           // App Bar
@@ -56,16 +51,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             elevation: 0,
             title: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.computer,
-                    color: Colors.white,
-                    size: 20,
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.asset(
+                    'assets/images/ace_technologies_logo.jpeg',
+                    width: 36,
+                    height: 36,
+                    fit: BoxFit.cover,
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -171,7 +163,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             children: [
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () => widget.onNavigate?.call(1),
+                  onPressed: () => context.go('/products'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: AppTheme.primaryColor,
@@ -182,7 +174,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () => widget.onNavigate?.call(2),
+                  onPressed: () => context.go('/services'),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Colors.white),
                     foregroundColor: Colors.white,
@@ -476,7 +468,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
               TextButton(
-                onPressed: () => widget.onNavigate?.call(2),
+                onPressed: () => context.go('/services'),
                 child: const Text('View All'),
               ),
             ],
@@ -542,7 +534,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
               TextButton(
-                onPressed: () => widget.onNavigate?.call(1),
+                onPressed: () => context.go('/products'),
                 child: const Text('View All'),
               ),
             ],
@@ -568,45 +560,47 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             builder: (context, constraints) {
               final isWide = constraints.maxWidth >= 900;
               return GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: isWide ? 2 : 2,
-              mainAxisExtent: isWide ? 310 : null,
-              childAspectRatio: isWide ? 1 : 0.5,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-            ),
-            itemCount: products.length,
-            itemBuilder: (context, index) {
-              return ProductCard(
-                product: products[index],
-                onAddToCart: () async {
-                  try {
-                    await ref
-                        .read(cartProvider.notifier)
-                        .addToCart(products[index]);
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('${products[index].name} added to cart!'),
-                        action: SnackBarAction(
-                          label: 'VIEW CART',
-                          onPressed: () => widget.onNavigate?.call(3),
-                        ),
-                      ),
-                    );
-                  } catch (error) {
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text(error.toString())));
-                  }
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: isWide ? 2 : 2,
+                  mainAxisExtent: isWide ? 310 : null,
+                  childAspectRatio: isWide ? 1 : 0.5,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                ),
+                itemCount: products.length,
+                itemBuilder: (context, index) {
+                  return ProductCard(
+                    product: products[index],
+                    onAddToCart: () async {
+                      try {
+                        await ref
+                            .read(cartProvider.notifier)
+                            .addToCart(products[index]);
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              '${products[index].name} added to cart!',
+                            ),
+                            action: SnackBarAction(
+                              label: 'VIEW CART',
+                              onPressed: () => context.go('/cart'),
+                            ),
+                          ),
+                        );
+                      } catch (error) {
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(error.toString())),
+                        );
+                      }
+                    },
+                  );
                 },
               );
-            },
-          );
             },
           ),
         const SizedBox(height: 16),

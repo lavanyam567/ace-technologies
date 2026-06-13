@@ -36,8 +36,8 @@ import '../../features/account/screens/login_screen.dart';
 import '../../features/account/screens/signup_screen.dart';
 import '../../features/account/screens/profile_screen.dart';
 import '../../features/account/screens/settings_screen.dart';
-import '../../features/chatbot/screens/chat_screen.dart';
 import '../../features/admin/screens/admin_orders_screen.dart';
+import '../../features/support/noupe_chat_screen.dart';
 import '../responsive/responsive_config.dart';
 import '../responsive/adaptive_navigation.dart';
 
@@ -82,8 +82,8 @@ class AppRoutes {
   static const String signup = '/signup';
   static const String profile = '/profile';
   static const String settings = '/settings';
-  static const String chat = '/chat';
   static const String adminOrders = '/admin/orders';
+  static const String noupeChat = '/noupe-chat';
 }
 
 /// Navigation shell with responsive navigation (bottom nav for mobile, sidebar for web)
@@ -135,7 +135,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
         isActive: currentRoute.startsWith('/services'),
       ),
       NavItem(
-        label: 'About',
+        label: 'About Us',
         icon: Icons.info_outline,
         route: AppRoutes.about,
         isActive: currentRoute.startsWith('/about'),
@@ -178,6 +178,11 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
       // Mobile Layout with Bottom Navigation
       return Scaffold(
         body: widget.child,
+        floatingActionButton: FloatingActionButton(
+          onPressed: () => context.push(AppRoutes.noupeChat),
+          tooltip: 'Chat with Ace AI',
+          child: const Icon(Icons.chat_bubble_outline),
+        ),
         bottomNavigationBar: BottomNavigationBar(
           currentIndex: widget.currentIndex,
           type: BottomNavigationBarType.fixed,
@@ -222,7 +227,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
             BottomNavigationBarItem(
               icon: Icon(Icons.info_outline),
               activeIcon: Icon(Icons.info),
-              label: 'About',
+              label: 'About Us',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.shopping_cart_outlined),
@@ -241,16 +246,15 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
   }
 }
 
-final appRouter = _createRouter();
-
 /// Router provider
 final routerProvider = Provider<GoRouter>((ref) {
-  return appRouter;
+  final router = _createRouter();
+  ref.onDispose(router.dispose);
+  return router;
 });
 
 GoRouter _createRouter() {
   return GoRouter(
-    initialLocation: AppRoutes.home,
     redirect: (context, state) {
       // Clean Supabase OAuth callback parameters from the URL
       if (state.uri.queryParameters.containsKey('code') ||
@@ -260,8 +264,10 @@ GoRouter _createRouter() {
         queryParams.remove('code');
         queryParams.remove('error');
         queryParams.remove('error_description');
-        
-        final newUri = state.uri.replace(queryParameters: queryParams.isEmpty ? null : queryParams);
+
+        final newUri = state.uri.replace(
+          queryParameters: queryParams.isEmpty ? null : queryParams,
+        );
         return newUri.toString();
       }
       return null;
@@ -406,6 +412,10 @@ GoRouter _createRouter() {
         path: AppRoutes.recentlyViewed,
         builder: (context, state) => const RecentlyViewedScreen(),
       ),
+      GoRoute(
+        path: AppRoutes.noupeChat,
+        builder: (context, state) => const NoupeChatScreen(),
+      ),
 
       // Checkout flow
       GoRoute(
@@ -451,14 +461,6 @@ GoRouter _createRouter() {
       GoRoute(
         path: AppRoutes.serviceHistory,
         builder: (context, state) => const ServiceHistoryScreen(),
-      ),
-
-      // Ace AI Chatbot
-      GoRoute(
-        path: AppRoutes.chat,
-        builder: (context, state) => ChatScreen(
-          initialMessage: state.extra is String ? state.extra as String : null,
-        ),
       ),
 
       // Auth routes

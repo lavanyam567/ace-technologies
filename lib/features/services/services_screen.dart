@@ -151,27 +151,11 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
                     itemCount: services.length,
                     itemBuilder: (context, index) {
                       final service = services[index];
-                      return Column(
-                        children: [
-                          ServiceCard(
-                            service: service,
-                            onBookNow: () {
-                              _showBookingDialog(service);
-                            },
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: OutlinedButton.icon(
-                              onPressed: () => context.push(
-                                '/chat',
-                                extra:
-                                    "I want a quote for ${service.title}. What's the starting price?",
-                              ),
-                              icon: const Icon(Icons.smart_toy_outlined),
-                              label: const Text('Get a quote via chat'),
-                            ),
-                          ),
-                        ],
+                      return ServiceCard(
+                        service: service,
+                        onBookNow: () {
+                          _showBookingDialog(service);
+                        },
                       );
                     },
                   ),

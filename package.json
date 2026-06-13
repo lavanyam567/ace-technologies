@@ -3,6 +3,11 @@
     "mongodb": "^7.2.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "nodemon": "^3.1.14",
+    "selenium-webdriver": "^4.44.0",
+    "xlsx": "^0.18.5"
+  },
+  "scripts": {
+    "test:e2e": "node tests/e2e/selenium-e2e.js"
   }
 }

@@ -55,16 +55,13 @@ class DesktopSidebarNav extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.computer,
-                    color: Colors.white,
-                    size: 24,
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.asset(
+                    'assets/images/ace_technologies_logo.jpeg',
+                    width: 40,
+                    height: 40,
+                    fit: BoxFit.cover,
                   ),
                 ),
                 if (isExpanded)
@@ -114,56 +111,15 @@ class DesktopSidebarNav extends StatelessWidget {
 
                 return Tooltip(
                   message: item.label,
-                  child: InkWell(
-                    onTap: () => onNavigate(item.route),
-                    hoverColor: Colors.grey.shade100,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 12,
-                      ),
-                      decoration: isActive
-                          ? BoxDecoration(
-                              color: AppTheme.primaryColor.withValues(
-                                alpha: 0.1,
-                              ),
-                              border: Border(
-                                left: BorderSide(
-                                  color: AppTheme.primaryColor,
-                                  width: 3,
-                                ),
-                              ),
-                            )
-                          : null,
-                      child: Row(
-                        children: [
-                          Icon(
-                            item.icon,
-                            color: isActive
-                                ? AppTheme.primaryColor
-                                : AppTheme.textSecondary,
-                            size: 24,
-                          ),
-                          if (isExpanded) ...[
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Text(
-                                item.label,
-                                style: TextStyle(
-                                  color: isActive
-                                      ? AppTheme.primaryColor
-                                      : AppTheme.textPrimary,
-                                  fontWeight: isActive
-                                      ? FontWeight.w600
-                                      : FontWeight.w500,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
+                  child: ListTile(
+                    selected: isActive,
+                    selectedTileColor: AppTheme.primaryColor.withValues(
+                      alpha: 0.1,
                     ),
+                    leading: Icon(item.icon, size: 24),
+                    title: isExpanded ? Text(item.label) : null,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                    onTap: () => onNavigate(item.route),
                   ),
                 );
               },
@@ -216,13 +172,14 @@ class DesktopTopAppBar extends StatelessWidget implements PreferredSizeWidget {
       ),
       title: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryColor,
-              borderRadius: BorderRadius.circular(8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.asset(
+              'assets/images/ace_technologies_logo.jpeg',
+              width: 40,
+              height: 40,
+              fit: BoxFit.cover,
             ),
-            child: const Icon(Icons.computer, color: Colors.white, size: 24),
           ),
           const SizedBox(width: 12),
           const Text(

@@ -109,31 +109,6 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
               onPressed: () => context.go('/signup'),
               child: const Text('Create account'),
             ),
-            const SizedBox(height: 16),
-            InkWell(
-              onTap: () => context.push('/chat'),
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: AppTheme.primaryColor.withValues(alpha: 0.3),
-                  ),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(
-                      Icons.smart_toy_outlined,
-                      color: AppTheme.primaryColor,
-                    ),
-                    SizedBox(width: 10),
-                    Expanded(child: Text('Have questions? Chat with Ace AI →')),
-                  ],
-                ),
-              ),
-            ),
           ],
         ),
       ),

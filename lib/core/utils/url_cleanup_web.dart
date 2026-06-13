@@ -11,5 +11,9 @@ void cleanAuthCallbackUrl() {
   if (!hasAuthCallback) return;
 
   final cleanUri = uri.replace(queryParameters: const {});
-  html.window.history.replaceState(null, html.document.title, cleanUri.toString());
+  html.window.history.replaceState(
+    null,
+    html.document.title,
+    cleanUri.toString(),
+  );
 }

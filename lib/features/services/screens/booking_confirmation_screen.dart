@@ -13,11 +13,44 @@ class BookingConfirmationScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final bookings = ref.watch(serviceBookingsProvider);
+    final isLoading = ref.watch(serviceBookingsLoadingProvider);
     final matches = bookings.where((b) => b.id == bookingId);
     final booking = matches.isEmpty ? null : matches.first;
 
-    if (booking == null) {
+    if (booking == null && isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (booking == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Booking Confirmation')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.event_busy, size: 64, color: Colors.grey),
+                const SizedBox(height: 16),
+                Text(
+                  'Booking not found',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'This service booking could not be found or is no longer available.',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () => context.go('/services'),
+                  child: const Text('View Services'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
     }
 
     return Scaffold(

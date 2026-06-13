@@ -406,16 +406,6 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                   _buildDetailRow('Brand', product.brand),
                   _buildDetailRow('Warranty', '1 Year Manufacturer Warranty'),
                   _buildDetailRow('Delivery', 'Free shipping across India'),
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: () => context.push(
-                      '/chat',
-                      extra:
-                          'Tell me more about ${product.name} — is it worth buying?',
-                    ),
-                    icon: const Icon(Icons.chat_bubble_outline),
-                    label: const Text('Ask about this product'),
-                  ),
                 ],
               ),
             ),

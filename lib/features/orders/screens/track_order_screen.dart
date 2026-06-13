@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../orders/providers/order_providers.dart';
 
@@ -401,7 +400,6 @@ class _TrackOrderScreenState extends ConsumerState<TrackOrderScreen> {
             ),
             const SizedBox(height: 8),
             _buildHelpOption(Icons.support_agent, 'Chat with Support'),
-            _buildChatAboutOrder(context, order.id),
             _buildHelpOption(Icons.phone, 'Call Us'),
             _buildHelpOption(Icons.help_outline, 'FAQ'),
           ],
@@ -430,32 +428,4 @@ class _TrackOrderScreenState extends ConsumerState<TrackOrderScreen> {
     );
   }
 
-  Widget _buildChatAboutOrder(BuildContext context, String orderId) {
-    return InkWell(
-      onTap: () => context.push(
-        '/chat',
-        extra: 'I have a question about my order #$orderId',
-      ),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: const Row(
-          children: [
-            Icon(Icons.smart_toy_outlined, color: AppTheme.primaryColor),
-            SizedBox(width: 12),
-            Text(
-              'Chat about this order',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-            Spacer(),
-            Icon(Icons.arrow_forward_ios, size: 16),
-          ],
-        ),
-      ),
-    );
-  }
 }
