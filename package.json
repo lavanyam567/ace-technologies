@@ -9,6 +9,8 @@
   },
   "scripts": {
     "test:e2e": "node tests/e2e/selenium-e2e.js",
+    "test:appium": "npm --prefix appium_tests run test",
+    "test:appium:all": "npm --prefix appium_tests run test:all",
     "summary": "node scripts/generate-markdown-summary.js"
   }
 }

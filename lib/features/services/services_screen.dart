@@ -156,6 +156,9 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
                         onBookNow: () {
                           _showBookingDialog(service);
                         },
+                        onTap: () {
+                          context.go('/service/${service.id}');
+                        },
                       );
                     },
                   ),

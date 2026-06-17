@@ -15,6 +15,7 @@ class AccountScreen extends ConsumerStatefulWidget {
 class _AccountScreenState extends ConsumerState<AccountScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  String? _validationError;
 
   @override
   void dispose() {
@@ -69,27 +70,43 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
               style: TextStyle(color: Colors.grey.shade600),
             ),
             const SizedBox(height: 24),
-            TextField(
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(
-                labelText: 'Email',
-                prefixIcon: Icon(Icons.email_outlined),
+            Semantics(
+              label: 'Email',
+              container: true,
+              child: TextField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  prefixIcon: Icon(Icons.email_outlined),
+                ),
               ),
             ),
             const SizedBox(height: 12),
-            TextField(
-              controller: _passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'Password',
-                prefixIcon: Icon(Icons.lock_outlined),
+            Semantics(
+              label: 'Password',
+              container: true,
+              child: TextField(
+                controller: _passwordController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Password',
+                  prefixIcon: Icon(Icons.lock_outlined),
+                ),
               ),
             ),
             if (auth.error != null) ...[
               const SizedBox(height: 12),
               Text(
                 _friendlyError(auth.error!),
+                style: const TextStyle(color: AppTheme.errorColor),
+                textAlign: TextAlign.center,
+              ),
+            ],
+            if (_validationError != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                _validationError!,
                 style: const TextStyle(color: AppTheme.errorColor),
                 textAlign: TextAlign.center,
               ),
@@ -119,10 +136,17 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
     if (email.isEmpty || password.isEmpty) {
+      setState(() {
+        _validationError = 'Enter email and password';
+      });
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Enter email and password')));
       return;
+    } else {
+      setState(() {
+        _validationError = null;
+      });
     }
 
     await ref.read(authProvider.notifier).login(email, password);

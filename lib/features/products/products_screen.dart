@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/product_model.dart';
 import '../../widgets/product_card.dart';
@@ -414,6 +415,9 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
             return ProductCard(
               product: product,
               isWishlisted: isWishlisted,
+              onTap: () {
+                context.go('/product/${product.id}');
+              },
               onAddToCart: () {
                 ref.read(cartProvider.notifier).addToCart(product);
                 ScaffoldMessenger.of(context).showSnackBar(

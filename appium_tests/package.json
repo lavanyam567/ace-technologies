@@ -1,0 +1,22 @@
+{
+  "name": "ace-technologies-appium-tests",
+  "version": "1.0.0",
+  "description": "Comprehensive Appium Android E2E Testing Suite for Ace Technologies Mobile Application",
+  "main": "runner.js",
+  "scripts": {
+    "test": "node runner.js",
+    "test:functional": "node runner.js --suite functional",
+    "test:ui": "node runner.js --suite ui",
+    "test:compatibility": "node runner.js --suite compatibility",
+    "test:e2e": "node runner.js --suite e2e",
+    "test:all": "node runner.js --suite all"
+  },
+  "dependencies": {
+    "webdriverio": "^8.39.0",
+    "xlsx": "^0.18.5",
+    "cross-env": "^7.0.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -500,6 +500,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 service: services[index],
                 onBookNow: () =>
                     context.go('/service/${services[index].id}/book'),
+                onTap: () {
+                  context.go('/service/${services[index].id}');
+                },
               );
             },
           ),
@@ -574,6 +577,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 itemBuilder: (context, index) {
                   return ProductCard(
                     product: products[index],
+                    onTap: () {
+                      context.go('/product/${products[index].id}');
+                    },
                     onAddToCart: () async {
                       try {
                         await ref
