@@ -80,3 +80,11 @@ jobs:
           else
             echo "### ⚠️ TEST_SUMMARY.md was not generated!" >> $GITHUB_STEP_SUMMARY
           fi
+      - name: Upload Specific Appium Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ace-Technologies-Appium-TestReport-2026-06-16
+          path: reports/Ace_Technologies_Appium_TestReport_2026-06-16T14-12-45-905Z.xlsx
+          if-no-files-found: warn
+          retention-days: 14
