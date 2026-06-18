@@ -9,6 +9,7 @@
 const http  = require('http');
 const https = require('https');
 const CONFIG = require('../config/test-config');
+const { resolveAppUrl } = require('../utils/driver-helpers');
 
 const SUITE = 'API Testing';
 
@@ -87,7 +88,7 @@ function makeCases() {
   add('manifest.json is reachable from server', 'Static Assets', '/manifest.json',
     'HTTP 200 for manifest.json',
     async () => {
-      const url = new URL('/manifest.json', CONFIG.app.baseUrl).toString();
+      const url = resolveAppUrl('/manifest.json');
       const res = await httpRequest(url).catch(() => ({ status: 0 }));
       if (res.status !== 200) throw new Error(`manifest.json returned HTTP ${res.status}`);
     }, 'Medium');
@@ -95,7 +96,7 @@ function makeCases() {
   add('favicon.png is reachable from server', 'Static Assets', '/favicon.png',
     'HTTP 200 for favicon.png',
     async () => {
-      const url = new URL('/favicon.png', CONFIG.app.baseUrl).toString();
+      const url = resolveAppUrl('/favicon.png');
       const res = await httpRequest(url).catch(() => ({ status: 0 }));
       if (res.status !== 200) throw new Error(`favicon.png returned HTTP ${res.status}`);
     }, 'Low');
@@ -183,7 +184,7 @@ function makeCases() {
   add('Unknown API route returns appropriate response (not crash)', 'Error Handling', '/api/does-not-exist',
     'Server handles unknown path (200 SPA fallback or 404)',
     async () => {
-      const url = new URL('/api/does-not-exist', CONFIG.app.baseUrl).toString();
+      const url = resolveAppUrl('/api/does-not-exist');
       const res = await httpRequest(url).catch(() => ({ status: 0 }));
       // SPA servers return 200 with index.html for unknown paths
       if (res.status !== 200 && res.status !== 404)

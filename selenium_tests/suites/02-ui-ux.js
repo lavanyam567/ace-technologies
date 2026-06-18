@@ -8,7 +8,7 @@
 const {
   openRoute, assertReadablePage, assertAnyText, scrollPage,
   clickText, wait, elementExists, executeJs, screenshot,
-  By, setViewport,
+  By, setViewport, resolveAppUrl,
 } = require('../utils/driver-helpers');
 const CONFIG = require('../config/test-config');
 
@@ -25,7 +25,7 @@ function makeCases() {
   add('Loading spinner disappears after app boots', 'Loading State', '/',
     'Loading screen hidden after boot',
     async (driver) => {
-      await driver.get(new URL('/', CONFIG.app.baseUrl).toString());
+      await driver.get(resolveAppUrl('/'));
       // Flutter can take several seconds to boot – give it extra time
       await wait(CONFIG.timeouts.flutterBoot + 3000);
       const spinnerVisible = await executeJs(driver, `

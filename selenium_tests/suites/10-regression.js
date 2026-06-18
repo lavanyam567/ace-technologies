@@ -9,7 +9,7 @@
 const {
   openRoute, assertReadablePage, assertAnyText, assertAllText,
   clickText, fillFirstInput, wait, getTitle, getUrl, setViewport,
-  executeJs,
+  executeJs, resolveAppUrl,
 } = require('../utils/driver-helpers');
 const CONFIG = require('../config/test-config');
 
@@ -191,7 +191,7 @@ function makeCases() {
   add('REGRESSION: No uncaught errors on home page load',
     'Error Monitoring', '/', 'No console errors captured',
     async (driver) => {
-      await driver.get(new URL('/', CONFIG.app.baseUrl).toString());
+      await driver.get(resolveAppUrl('/'));
       // Inject error capture before Flutter boots
       await executeJs(driver, `
         window.__testErrors = [];

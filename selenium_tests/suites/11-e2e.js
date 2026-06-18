@@ -9,7 +9,7 @@
 const {
   openRoute, assertReadablePage, assertAnyText, assertAllText,
   clickText, fillFirstInput, fillInputByPlaceholder, wait,
-  scrollPage, setViewport, executeJs, getUrl,
+  scrollPage, setViewport, executeJs, getUrl, resolveAppUrl,
 } = require('../utils/driver-helpers');
 const CONFIG = require('../config/test-config');
 
@@ -265,7 +265,7 @@ function makeCases() {
         ['/about', 'About Us'],
         ['/account', 'Account'],
       ]) {
-        await driver.get(new URL(route, CONFIG.app.baseUrl).toString());
+        await driver.get(resolveAppUrl(route));
         await wait(CONFIG.timeouts.flutterBoot);
         await assertAnyText(driver, [expected, 'Ace Technologies']);
       }

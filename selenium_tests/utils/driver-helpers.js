@@ -8,6 +8,23 @@ const { Builder, By, Key, until } = require('selenium-webdriver');
 const chrome = require('selenium-webdriver/chrome');
 const CONFIG = require('../config/test-config');
 
+function resolveAppUrl(route) {
+  const normalizedRoute = String(route || '/');
+  if (/^https?:\/\//i.test(normalizedRoute)) return normalizedRoute;
+
+  const base = new URL(CONFIG.app.baseUrl);
+  const basePathWithSlash = base.pathname.endsWith('/') ? base.pathname : `${base.pathname}/`;
+  const normalizedBase = `${base.origin}${basePathWithSlash}`;
+  const resolved = new URL(normalizedRoute, normalizedBase);
+
+  if (basePathWithSlash !== '/' && normalizedRoute.startsWith('/')) {
+    const repoBase = basePathWithSlash.replace(/\/$/, '');
+    resolved.pathname = `${repoBase}${resolved.pathname}`;
+  }
+
+  return resolved.toString();
+}
+
 /**
  * Build a configured Chrome WebDriver instance.
  * @param {object} [overrides]  Optional window-size override.
@@ -51,7 +68,7 @@ async function waitForAppReady(driver) {
 
 /** Navigate to a URL and wait for the Flutter app to boot. */
 async function openRoute(driver, route) {
-  const url = new URL(route, CONFIG.app.baseUrl).toString();
+  const url = resolveAppUrl(route);
   await driver.get(url);
   await waitForAppReady(driver);
 }
@@ -276,6 +293,7 @@ module.exports = {
   getUrl,
   executeJs,
   waitForUrlContains,
+  resolveAppUrl,
   By,
   Key,
   until,
