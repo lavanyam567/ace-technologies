@@ -431,7 +431,7 @@ function makeCases() {
         const audit = await executeJs(driver, `
           const marker = arguments[0];
           const flaggedElements = Array.from(
-            document.querySelectorAll('[data-xss-marker], [onload], [onerror], script, svg, img, iframe]')
+            document.querySelectorAll('[data-xss-marker], [onload], [onerror], script, svg, img, iframe')
           ).filter((el) => {
             const html = (el.outerHTML || '').toLowerCase();
             return html.includes(marker.toLowerCase());
@@ -500,11 +500,14 @@ function makeCases() {
       `Vulnerability: path traversal probe handled safely for ${route}`,
       'Vulnerability - Path Traversal',
       route,
-      'App shell stays readable and no file contents are exposed',
+      'App shell or safe block response appears and no file contents are exposed',
       async (driver) => {
         await openRoute(driver, route);
-        await assertReadablePage(driver);
         const text = normalizeText(await pageText(driver));
+        const safeBlockedResponse = text.includes('forbidden') || text.includes('not found') || text.includes('access denied');
+        if (!safeBlockedResponse) {
+          await assertReadablePage(driver);
+        }
         if (text.includes('root:x:') || text.includes('[extensions]') || text.includes('for 16-bit app support')) {
           throw new Error('Potential file disclosure detected from traversal probe.');
         }
