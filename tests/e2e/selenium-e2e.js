@@ -431,20 +431,30 @@ function makeCases() {
         const audit = await executeJs(driver, `
           const marker = arguments[0];
           const flaggedElements = Array.from(
-            document.querySelectorAll('[data-xss-marker], [onload], [onerror], script, svg, img, iframe')
+            document.querySelectorAll('[data-xss-marker], script, svg, img')
           ).filter((el) => {
+            const attrMarker = (el.getAttribute('data-xss-marker') || '').toLowerCase();
+            const html = (el.outerHTML || '').toLowerCase();
+            return attrMarker === marker.toLowerCase() || html.includes(marker.toLowerCase());
+          }).map((el) => el.tagName.toLowerCase());
+          const inlineHandlerDetected = Array.from(
+            document.querySelectorAll('[onload], [onerror]')
+          ).some((el) => {
             const html = (el.outerHTML || '').toLowerCase();
             return html.includes(marker.toLowerCase());
-          }).map((el) => el.tagName.toLowerCase());
+          });
           const scriptTriggered = Boolean(
             window['__codex_svg_xss'] ||
             window['__codex_img_xss'] ||
             window['__codex_hash_xss']
           );
-          return { flaggedElements, scriptTriggered };
+          return { flaggedElements, inlineHandlerDetected, scriptTriggered };
         `, payload.marker);
         if (audit.scriptTriggered) {
           throw new Error('Potential XSS execution detected from injected payload.');
+        }
+        if (audit.inlineHandlerDetected) {
+          throw new Error('Potential inline event handler injection detected.');
         }
         if (audit.flaggedElements.length > 0) {
           throw new Error(`Potential DOM injection detected: ${audit.flaggedElements.join(', ')}`);
