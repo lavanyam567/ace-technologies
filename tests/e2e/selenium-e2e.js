@@ -26,7 +26,23 @@ const REPORT_PATH = path.join(
 );
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-const pageUrl = (route) => new URL(route, BASE_URL).toString();
+
+function pageUrl(route) {
+  const normalizedRoute = String(route || '/');
+  if (/^https?:\/\//i.test(normalizedRoute)) return normalizedRoute;
+
+  const base = new URL(BASE_URL);
+  const basePathWithSlash = base.pathname.endsWith('/') ? base.pathname : `${base.pathname}/`;
+  const normalizedBase = `${base.origin}${basePathWithSlash}`;
+  const resolved = new URL(normalizedRoute, normalizedBase);
+
+  if (basePathWithSlash !== '/' && normalizedRoute.startsWith('/')) {
+    const repoBase = basePathWithSlash.replace(/\/$/, '');
+    resolved.pathname = `${repoBase}${resolved.pathname}`;
+  }
+
+  return resolved.toString();
+}
 
 function ensureReportDirs() {
   fs.mkdirSync(REPORT_DIR, { recursive: true });

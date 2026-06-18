@@ -1,19 +1,29 @@
-name: E2E and Vulnerability Excel Report
+name: Deploy GitHub Pages and Run E2E Report
 
 on:
   push:
     branches:
-      - "**"
+      - main
   workflow_dispatch:
 
 concurrency:
-  group: e2e-report-${{ github.ref }}
+  group: pages-e2e-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
-  generate-report:
+  deploy-pages:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - name: Checkout repository
@@ -31,8 +41,8 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Install Chrome
-        uses: browser-actions/setup-chrome@v1
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
 
       - name: Install Flutter dependencies
         run: flutter pub get
@@ -40,24 +50,76 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
 
-      - name: Create CI env file
+      - name: Create CI env file for GitHub Pages
         shell: bash
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           PAYMENT_GATEWAY: ${{ secrets.PAYMENT_GATEWAY }}
           RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID }}
-          APP_REDIRECT_URL: ${{ secrets.APP_REDIRECT_URL }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          APP_REDIRECT_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
         run: node scripts/create-ci-env.js
 
-      - name: Build Flutter web app
-        run: flutter build web --release --dart-define-from-file=env.ci.json
+      - name: Build Flutter web app for GitHub Pages
+        run: flutter build web --release --base-href "/${{ github.event.repository.name }}/" --dart-define-from-file=env.ci.json
 
-      - name: Run Selenium E2E and vulnerability suite and generate Excel report
+      - name: Add SPA fallback for GitHub Pages routes
+        run: |
+          cp build/web/index.html build/web/404.html
+          touch build/web/.nojekyll
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  generate-report:
+    needs: deploy-pages
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install Chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Wait for GitHub Pages deployment to become reachable
+        env:
+          PAGES_URL: ${{ needs.deploy-pages.outputs.page_url }}
+        run: |
+          for attempt in {1..20}; do
+            if curl --fail --silent --show-error --location "$PAGES_URL" > /tmp/pages-home.html; then
+              if grep -qi "Ace Technologies" /tmp/pages-home.html; then
+                exit 0
+              fi
+            fi
+            echo "Pages URL not ready yet. Retry $attempt/20..."
+            sleep 15
+          done
+          echo "GitHub Pages URL did not become ready in time: $PAGES_URL"
+          exit 1
+
+      - name: Run Selenium E2E and vulnerability suite against GitHub Pages
         env:
           HEADLESS: "true"
-          E2E_ASSERT_TIMEOUT_MS: "15000"
+          E2E_BASE_URL: ${{ needs.deploy-pages.outputs.page_url }}
+          E2E_ASSERT_TIMEOUT_MS: "20000"
         run: npm run test:e2e
 
       - name: Upload E2E and vulnerability Excel reports
