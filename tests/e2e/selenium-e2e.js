@@ -83,6 +83,14 @@ async function openRoute(driver, route) {
   await waitForAppReady(driver);
 }
 
+async function executeJs(driver, script, ...args) {
+  return driver.executeScript(script, ...args);
+}
+
+async function currentUrl(driver) {
+  return driver.getCurrentUrl();
+}
+
 async function assertReadablePage(driver) {
   await driver.wait(async () => normalizeText(await pageText(driver)).length > 10, ASSERT_TIMEOUT_MS, 'Expected readable page text');
 }
@@ -190,7 +198,9 @@ function addCase(cases, id, title, area, route, expected, run, priority = 'Mediu
 function makeCases() {
   const cases = [];
   let n = 1;
+  let securityN = 1;
   const nextId = () => `E2E-${String(n++).padStart(3, '0')}`;
+  const nextSecurityId = () => `SEC-${String(securityN++).padStart(3, '0')}`;
 
   const coreRoutes = [
     ['/', 'Home', ['Ace Technologies', 'Home Screen']],
@@ -387,6 +397,190 @@ function makeCases() {
     });
   }
 
+  const addSecurityCase = (title, area, route, expected, run, priority = 'High') => {
+    addCase(cases, nextSecurityId(), title, area, route, expected, run, priority);
+  };
+
+  const xssPayloads = [
+    {
+      label: 'SVG onload payload is not materialized in DOM',
+      marker: 'codex_svg_xss_marker',
+      route: `/search?q=${encodeURIComponent('<svg data-xss-marker="codex_svg_xss_marker" onload="window.__codex_svg_xss = 1"></svg>')}`,
+    },
+    {
+      label: 'IMG onerror payload is not materialized in DOM',
+      marker: 'codex_img_xss_marker',
+      route: `/search?q=${encodeURIComponent('<img data-xss-marker="codex_img_xss_marker" src="x" onerror="window.__codex_img_xss = 1">')}`,
+    },
+    {
+      label: 'DOM hash payload is not materialized in DOM',
+      marker: 'codex_hash_xss_marker',
+      route: `/#${encodeURIComponent('<svg data-xss-marker="codex_hash_xss_marker" onload="window.__codex_hash_xss = 1"></svg>')}`,
+    },
+  ];
+
+  for (const payload of xssPayloads) {
+    addSecurityCase(
+      `Vulnerability: ${payload.label}`,
+      'Vulnerability - XSS',
+      payload.route,
+      'No injected DOM nodes or script execution from payload',
+      async (driver) => {
+        await openRoute(driver, payload.route);
+        await assertReadablePage(driver);
+        const audit = await executeJs(driver, `
+          const marker = arguments[0];
+          const flaggedElements = Array.from(
+            document.querySelectorAll('[data-xss-marker], [onload], [onerror], script, svg, img, iframe]')
+          ).filter((el) => {
+            const html = (el.outerHTML || '').toLowerCase();
+            return html.includes(marker.toLowerCase());
+          }).map((el) => el.tagName.toLowerCase());
+          const scriptTriggered = Boolean(
+            window['__codex_svg_xss'] ||
+            window['__codex_img_xss'] ||
+            window['__codex_hash_xss']
+          );
+          return { flaggedElements, scriptTriggered };
+        `, payload.marker);
+        if (audit.scriptTriggered) {
+          throw new Error('Potential XSS execution detected from injected payload.');
+        }
+        if (audit.flaggedElements.length > 0) {
+          throw new Error(`Potential DOM injection detected: ${audit.flaggedElements.join(', ')}`);
+        }
+      },
+    );
+  }
+
+  for (const route of [
+    '/?redirect=https://evil.example',
+    '/?next=//evil.example',
+    '/login?returnUrl=https://evil.example/steal',
+  ]) {
+    addSecurityCase(
+      `Vulnerability: external redirect is blocked for ${route}`,
+      'Vulnerability - Open Redirect',
+      route,
+      'Navigation stays on the app origin',
+      async (driver) => {
+        await openRoute(driver, route);
+        await wait(800);
+        const url = await currentUrl(driver);
+        const origin = new URL(BASE_URL).origin;
+        if (!url.startsWith(origin)) {
+          throw new Error(`Unexpected navigation to external origin: ${url}`);
+        }
+      },
+    );
+  }
+
+  for (const payload of ["' OR '1'='1", "1; DROP TABLE products;--", "' UNION SELECT password FROM users --"]) {
+    const route = `/search?q=${encodeURIComponent(payload)}`;
+    addSecurityCase(
+      `Vulnerability: SQL-style payload survives safely (${payload.slice(0, 24)})`,
+      'Vulnerability - Injection',
+      route,
+      'App remains readable and exposes no backend error details',
+      async (driver) => {
+        await openRoute(driver, route);
+        await assertReadablePage(driver);
+        const text = normalizeText(await pageText(driver));
+        for (const marker of ['syntax error', 'sqlstate', 'stack trace', 'internal server error', 'postgres', 'sqlite']) {
+          if (text.includes(marker)) {
+            throw new Error(`Potential backend error disclosure detected: ${marker}`);
+          }
+        }
+      },
+    );
+  }
+
+  for (const route of ['/../../etc/passwd', '/..%2F..%2Fwindows/win.ini']) {
+    addSecurityCase(
+      `Vulnerability: path traversal probe handled safely for ${route}`,
+      'Vulnerability - Path Traversal',
+      route,
+      'App shell stays readable and no file contents are exposed',
+      async (driver) => {
+        await openRoute(driver, route);
+        await assertReadablePage(driver);
+        const text = normalizeText(await pageText(driver));
+        if (text.includes('root:x:') || text.includes('[extensions]') || text.includes('for 16-bit app support')) {
+          throw new Error('Potential file disclosure detected from traversal probe.');
+        }
+      },
+      'Medium',
+    );
+  }
+
+  for (const route of ['/', '/about', '/products']) {
+    addSecurityCase(
+      `Vulnerability: ${route} has no javascript: links`,
+      'Vulnerability - Link Hygiene',
+      route,
+      'Anchors do not use javascript: URLs',
+      async (driver) => {
+        await openRoute(driver, route);
+        await assertReadablePage(driver);
+        const hrefs = await executeJs(driver, `
+          return Array.from(document.querySelectorAll('a[href]'))
+            .map((el) => el.getAttribute('href') || '')
+            .filter(Boolean);
+        `);
+        const badHref = hrefs.find((href) => href.trim().toLowerCase().startsWith('javascript:'));
+        if (badHref) {
+          throw new Error(`Unsafe javascript: link found: ${badHref}`);
+        }
+      },
+      'Medium',
+    );
+  }
+
+  for (const route of ['/', '/about']) {
+    addSecurityCase(
+      `Vulnerability: ${route} external tabs use rel protections`,
+      'Vulnerability - Link Hygiene',
+      route,
+      'Any target=_blank link has noopener/noreferrer',
+      async (driver) => {
+        await openRoute(driver, route);
+        await assertReadablePage(driver);
+        const offenders = await executeJs(driver, `
+          return Array.from(document.querySelectorAll('a[target="_blank"]'))
+            .map((el) => ({
+              href: el.getAttribute('href') || '',
+              rel: (el.getAttribute('rel') || '').toLowerCase(),
+            }))
+            .filter((item) => item.href && (!item.rel.includes('noopener') || !item.rel.includes('noreferrer')));
+        `);
+        if (offenders.length > 0) {
+          throw new Error(`target=_blank links missing rel protections: ${offenders.map((item) => item.href).join(', ')}`);
+        }
+      },
+      'Medium',
+    );
+  }
+
+  for (const route of ['/', '/account']) {
+    addSecurityCase(
+      `Vulnerability: ${route} HTML does not expose secret-like values`,
+      'Vulnerability - Secret Exposure',
+      route,
+      'No service-role/private-key style secrets are embedded in HTML',
+      async (driver) => {
+        await openRoute(driver, route);
+        await assertReadablePage(driver);
+        const html = normalizeText(await executeJs(driver, 'return document.documentElement ? document.documentElement.outerHTML : "";'));
+        for (const secretPattern of ['service_role', 'begin private key', 'supabase_service_role_key', 'aws_secret_access_key']) {
+          if (html.includes(secretPattern)) {
+            throw new Error(`Potential secret exposure detected: ${secretPattern}`);
+          }
+        }
+      },
+      'Medium',
+    );
+  }
+
   const selected = CASE_IDS.size > 0 ? cases.filter((testCase) => CASE_IDS.has(testCase.id)) : cases;
   return LIMIT > 0 ? selected.slice(0, LIMIT) : selected;
 }
@@ -396,15 +590,21 @@ function writeReport(results, cases) {
   const passed = results.filter((r) => r.status === 'PASS').length;
   const failed = results.filter((r) => r.status === 'FAIL').length;
   const notRun = cases.length - results.length;
+  const vulnerabilityCases = cases.filter((c) => c.id.startsWith('SEC-'));
+  const vulnerabilityResults = results.filter((r) => r.id.startsWith('SEC-'));
+  const vulnerabilityFailed = vulnerabilityResults.filter((r) => r.status === 'FAIL').length;
   const summary = [
     ['Application', 'Ace Technologies'],
     ['Base URL', BASE_URL],
     ['Started At', STARTED_AT.toISOString()],
     ['Report Generated At', new Date().toISOString()],
     ['Total Planned Cases', cases.length],
+    ['Vulnerability Cases Planned', vulnerabilityCases.length],
     ['Executed Cases', results.length],
+    ['Vulnerability Cases Executed', vulnerabilityResults.length],
     ['Passed', passed],
     ['Failed', failed],
+    ['Vulnerability Cases Failed', vulnerabilityFailed],
     ['Not Run', notRun],
     ['Headless', HEADLESS ? 'Yes' : 'No'],
   ];

@@ -33,11 +33,13 @@ flutter build web --dart-define-from-file=env.json
 
 ## CI E2E Report
 
-Every push can generate the Selenium `.xlsx` E2E report through
+Every push can generate the Selenium `.xlsx` E2E and vulnerability report through
 `.github/workflows/e2e-report.yml`. The workflow:
 
 - builds Flutter web with a generated `env.ci.json`
 - runs `npm run test:e2e`
+- includes route/UI coverage plus vulnerability checks such as XSS, open redirect,
+  injection, path traversal, unsafe links, and secret exposure probes
 - uploads `reports/*.xlsx` and `reports/evidence/**` as GitHub Actions artifacts
 
 Recommended GitHub repository secrets:

@@ -1,4 +1,4 @@
-name: E2E Excel Report
+name: E2E and Vulnerability Excel Report
 
 on:
   push:
@@ -54,17 +54,17 @@ jobs:
       - name: Build Flutter web app
         run: flutter build web --release --dart-define-from-file=env.ci.json
 
-      - name: Run Selenium E2E suite and generate Excel report
+      - name: Run Selenium E2E and vulnerability suite and generate Excel report
         env:
           HEADLESS: "true"
-          E2E_ASSERT_TIMEOUT_MS: "12000"
+          E2E_ASSERT_TIMEOUT_MS: "15000"
         run: npm run test:e2e
 
-      - name: Upload E2E Excel reports
+      - name: Upload E2E and vulnerability Excel reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-excel-report-${{ github.run_number }}
+          name: e2e-vulnerability-excel-report-${{ github.run_number }}
           path: |
             reports/*.xlsx
             reports/evidence/**
@@ -78,13 +78,5 @@ jobs:
           if [ -f TEST_SUMMARY.md ]; then
             cat TEST_SUMMARY.md >> $GITHUB_STEP_SUMMARY
           else
-            echo "### ⚠️ TEST_SUMMARY.md was not generated!" >> $GITHUB_STEP_SUMMARY
+            echo "### WARNING: TEST_SUMMARY.md was not generated!" >> $GITHUB_STEP_SUMMARY
           fi
-      - name: Upload Specific Appium Report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: Ace-Technologies-Appium-TestReport-2026-06-16
-          path: reports/Ace_Technologies_Appium_TestReport_2026-06-16T14-12-45-905Z.xlsx
-          if-no-files-found: warn
-          retention-days: 14
