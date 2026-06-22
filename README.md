@@ -73,6 +73,14 @@ Additional recommended GitHub repository secrets for real mobile login coverage:
 - `TEST_PASSWORD`
 - `ADMIN_EMAIL`
 
+## CI Baseline Load Report
+
+Baseline performance coverage now has a separate k6 pipeline in
+`.github/workflows/k6-baseline-report.yml`. It runs a `100` virtual-user
+baseline test for `1 minute` against the public Supabase-backed catalog
+endpoints, exports the k6 summary JSON, converts the results into an Excel
+workbook, and uploads both artifacts on every push to `main`.
+
 ## Production Checklist
 
 - Use live Razorpay keys and webhook secrets.

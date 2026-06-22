@@ -12,6 +12,7 @@
     "test:appium": "npm --prefix appium_tests run test",
     "test:appium:all": "npm --prefix appium_tests run test:all",
     "test:appium:mock": "npm --prefix appium_tests run test:mock",
+    "test:k6:baseline": "node k6_tests/run-baseline-load.js",
     "summary": "node scripts/generate-markdown-summary.js",
     "summary:appium": "npm --prefix appium_tests run summary"
   }

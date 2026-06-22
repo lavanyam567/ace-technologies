@@ -55,3 +55,4 @@ app.*.map.json
 supabase/.temp/
 appium_tests/reports/
 appium_tests/TEST_SUMMARY.md
+k6_tests/results/
