@@ -1,0 +1,62 @@
+name: Run full selenium suite against GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: selenium-suite-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  selenium-suite:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Run Selenium tests
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          npm run test:selenium
+
+      - name: Upload Selenium test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: selenium-test-report-${{ github.run_number }}
+          path: selenium_tests/reports/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Publish Selenium test summary to Job Summary
+        if: always()
+        run: |
+          if [ -d "selenium_tests/reports/" ] && [ -n "$(ls -A selenium_tests/reports/)" ]; then
+            {
+              echo "### Selenium test suite completed"
+              echo ""
+              echo "Test reports available in artifacts"
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### WARNING: Selenium test reports not found!" >> "$GITHUB_STEP_SUMMARY"
+          fi

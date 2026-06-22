@@ -1,0 +1,92 @@
+name: K6 Baseline Load Test
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: k6-baseline-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  k6-baseline-load:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Set up k6
+        uses: grafana/setup-k6-action@v1
+
+      - name: Run baseline load test and generate Excel report
+        env:
+          K6_BIN: k6
+          K6_ENV_FILE: env.ci.json
+          BASELINE_VUS: '100'
+          BASELINE_DURATION: '1m'
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          node scripts/create-ci-env.js
+          npm run test:k6:baseline
+
+      - name: Upload k6 baseline artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-baseline-report-${{ github.run_number }}
+          path: |
+            k6_tests/results/*.json
+            k6_tests/results/*.xlsx
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Publish k6 summary to Job Summary
+        if: always()
+        run: |
+          latest_report=$(ls -t k6_tests/results/*.xlsx 2>/dev/null | head -n 1 || true)
+          latest_summary=$(ls -t k6_tests/results/*.json 2>/dev/null | head -n 1 || true)
+          if [ -n "$latest_report" ]; then
+            {
+              echo "### 📊 K6 Baseline Load Test Report"
+              echo ""
+              echo "**Test Configuration:**"
+              echo "- Virtual users (VUs): 100"
+              echo "- Duration: 1 minute"
+              echo ""
+              echo "**Generated Files:**"
+              echo "- 📄 Excel Report: \`$(basename "$latest_report")\`"
+              echo "- 📋 JSON Summary: \`$(basename "$latest_summary")\`"
+              echo ""
+              echo "**Download:**"
+              echo "Reports are available as artifacts in the [Actions tab](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+              echo ""
+              echo "Artifact Name: \`k6-baseline-report-${{ github.run_number }}\`"
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### ⚠️ WARNING: k6 baseline Excel report was not generated!" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Create report badge and metadata
+        if: always()
+        run: |
+          echo "K6_RUN_ID=${{ github.run_id }}" >> $GITHUB_ENV
+          echo "K6_REPORT_NAME=k6-baseline-report-${{ github.run_number }}" >> $GITHUB_ENV
+          echo "K6_TEST_TIMESTAMP=$(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_ENV
