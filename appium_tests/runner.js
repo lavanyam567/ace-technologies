@@ -11,6 +11,7 @@
 //
 //  Environment variables:
 //    APPIUM_MOCK      - Set "true" to run in mock simulation mode (no Appium server needed)
+//    APPIUM_LIMIT     - Optional max number of test cases to execute per suite
 //    APP_APK_PATH     - Path to the android debug APK
 //    ANDROID_DEVICE_NAME - Target emulator name (default: "Android Emulator")
 //    TEST_EMAIL       - Valid credentials for testing
@@ -46,7 +47,9 @@ if (!selectedSuites.length) {
 
 // ── Test runner ───────────────────────────────────────────────────────────────
 async function runSuite(suiteModule, suiteKey) {
-  const cases = suiteModule.makeCases();
+  const allCases = suiteModule.makeCases();
+  const limit = Number(process.env.APPIUM_LIMIT || '0');
+  const cases = limit > 0 ? allCases.slice(0, limit) : allCases;
   const results = [];
 
   let driver = await buildDriver();
@@ -158,6 +161,9 @@ async function main() {
   console.log(`     APK : ${CONFIG.app.apkPath}`);
   console.log(`     Device: ${CONFIG.capabilities['appium:deviceName']} (Android ${CONFIG.capabilities['appium:platformVersion']})`);
   console.log(`     Suite(s): ${selectedSuites.map((s) => s.label).join(', ')}`);
+  if (Number(process.env.APPIUM_LIMIT || '0') > 0) {
+    console.log(`     Case limit: ${process.env.APPIUM_LIMIT} per suite`);
+  }
   console.log('═'.repeat(70) + '\n');
 
   const allCases = [];
@@ -222,7 +228,14 @@ async function main() {
     try {
       const { execSync } = require('child_process');
       console.log('     📝 Generating Markdown summary...');
-      execSync(`node "${path.resolve(__dirname, '../scripts/generate-markdown-summary.js')}"`, { stdio: 'inherit' });
+      execSync(`node "${path.resolve(__dirname, '../scripts/generate-markdown-summary.js')}"`, {
+        stdio: 'inherit',
+        env: {
+          ...process.env,
+          REPORTS_DIR: CONFIG.paths.reports,
+          SUMMARY_OUTPUT: CONFIG.paths.summary,
+        },
+      });
     } catch (err) {
       console.error('     ❌ Failed to generate Markdown summary:', err.message);
     }

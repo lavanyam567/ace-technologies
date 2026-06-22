@@ -22,7 +22,7 @@ let detectedDevice = 'RZCW40TQTAA';
 let detectedVersion = '15';
 
 try {
-  const devicesOutput = execSync('adb devices').toString();
+  const devicesOutput = execSync('adb devices', { stdio: ['ignore', 'pipe', 'ignore'] }).toString();
   const lines = devicesOutput.split('\n')
     .map(line => line.trim())
     .filter(line => line && !line.startsWith('List of devices'));
@@ -30,7 +30,10 @@ try {
     const firstDevice = lines[0].split(/\s+/)[0];
     if (firstDevice) {
       detectedDevice = firstDevice;
-      const versionOutput = execSync(`adb -s ${detectedDevice} shell getprop ro.build.version.release`).toString().trim();
+      const versionOutput = execSync(
+        `adb -s ${detectedDevice} shell getprop ro.build.version.release`,
+        { stdio: ['ignore', 'pipe', 'ignore'] }
+      ).toString().trim();
       if (versionOutput) {
         detectedVersion = versionOutput;
       }
@@ -87,8 +90,9 @@ const CONFIG = {
   // ── Paths ─────────────────────────────────────────────────────────────────
   paths: {
     root: path.resolve(__dirname, '..'),
-    reports: path.resolve(__dirname, '../../reports'),
-    evidence: path.resolve(__dirname, '../../reports/evidence'),
+    reports: path.resolve(__dirname, '../reports'),
+    evidence: path.resolve(__dirname, '../reports/evidence'),
+    summary: path.resolve(__dirname, '../TEST_SUMMARY.md'),
   },
 
   // ── Test Credentials (non-production) ────────────────────────────────────

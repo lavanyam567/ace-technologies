@@ -63,10 +63,10 @@ class MockDriver {
 function getMockPageText(route, driver) {
   const mockTexts = {
     '/': 'Ace Technologies\nHome Screen\nOne-Stop Solution\nProducts\nServices\nAbout Us\nCart\nAccount\nLogin',
-    '/products': 'Products Screen\nProducts\nHP Compaq\nSamsung\nDahua\nHikvision\nLaptops\nNetworking\nPrinters\nCamera',
+    '/products': 'Products Screen\nProducts\nHP Compaq\nSamsung\nDahua\nHikvision\nLaptops\nNetworking\nPrinters\nCamera\nFilter\nSort',
     '/services': 'Services Screen\nServices\nServer installation\nlaptop installation\nFirewall and security solutions\nDoor access configuration',
     '/about': 'About Us\nOur Objective\nOur Philosophy\nCapabilities\nMuralidharan P\nChennai\nHP Compaq\nSamsung\nDahua\nHikvision',
-    '/cart': 'Shopping Cart\nYour cart is empty\ncart is empty',
+    '/cart': 'Shopping Cart\nYour cart is empty\ncart is empty\nCheckout',
     '/account': 'Account Screen\nLogin to your account\nEmail\nPassword\nLogin\nCreate account',
     '/login': 'Sign In\nEmail\nPassword\nLogin\nCreate account',
     '/signup': 'Sign Up\nCreate Account\nEmail\nPassword\nConfirm Password\nSignup',
@@ -86,7 +86,16 @@ function getMockPageText(route, driver) {
     '/search?q=laptop': 'Search\nlaptop\nProducts',
     '/products/filter': 'Filter\nSort',
     '/product/sample-product': 'Product Detail\nsample product',
+    '/product/sample-product/gallery': 'Image Gallery\nsample product\nGallery',
+    '/product/sample-product/reviews': 'Reviews\nsample product\nRatings',
+    '/product/sample-product/write-review': 'Write Review\nsample product\nSubmit',
     '/service/sample-service': 'Service Detail\nsample service',
+    '/service/sample-service/book': 'Book Service\nsample service\nSchedule',
+    '/service/sample-service/schedule': 'Schedule Slot\nsample service\nChoose Time',
+    '/service/sample-service/confirmation': 'Booking Confirmation\nsample service\nConfirmed',
+    '/order/test-order': 'Order Detail\nOrders\nTracking',
+    '/order/test-order/track': 'Track Order\nOrders\nTracking',
+    '/order-success/test-order': 'Order Success\nThank you\nOrder placed',
   };
 
   let text = mockTexts[route] || mockTexts['/'];
@@ -233,6 +242,12 @@ async function openRoute(driver, route) {
     } else if (route === '/signup') {
       await clickText(driver, 'Account');
       await clickText(driver, 'Create account');
+    } else if (route === '/deals') {
+      await clickText(driver, 'Home');
+      await clickText(driver, 'Deals');
+    } else if (route === '/notifications') {
+      await clickText(driver, 'Home');
+      await clickText(driver, 'Notifications');
     } else if (route.startsWith('/search')) {
       await clickText(driver, 'Products');
       try {
@@ -259,6 +274,9 @@ async function openRoute(driver, route) {
     } else if (route === '/compare') {
       await clickText(driver, 'Account');
       await clickText(driver, 'Compare');
+    } else if (route === '/recent') {
+      await clickText(driver, 'Account');
+      await clickText(driver, 'Recent');
     } else if (route === '/orders') {
       await clickText(driver, 'Account');
       await clickText(driver, 'Orders');
@@ -271,6 +289,9 @@ async function openRoute(driver, route) {
     } else if (route === '/service-history') {
       await clickText(driver, 'Account');
       await clickText(driver, 'Service History');
+    } else if (route === '/admin/orders') {
+      await clickText(driver, 'Account');
+      await clickText(driver, 'Orders');
     } else {
       // General click navigation fallback
       const segments = route.split('/').filter(Boolean);
@@ -455,9 +476,24 @@ async function clickText(driver, text, { strict = false } = {}) {
     if (text === 'Cart') driver.currentRoute = '/cart';
     if (text === 'Account') driver.currentRoute = '/account';
     if (text === 'Create account') driver.currentRoute = '/signup';
+    if (text === 'Notifications') driver.currentRoute = '/notifications';
+    if (text === 'Deals' || text === 'Featured Deals') driver.currentRoute = '/deals';
+    if (text === 'Wishlist') driver.currentRoute = '/wishlist';
+    if (text === 'Compare') driver.currentRoute = '/compare';
+    if (text === 'Recent') driver.currentRoute = '/recent';
+    if (text === 'Orders') driver.currentRoute = '/orders';
+    if (text === 'Profile') driver.currentRoute = '/profile';
+    if (text === 'Settings') driver.currentRoute = '/settings';
+    if (text === 'Service History') driver.currentRoute = '/service-history';
+    if (text === 'Checkout') driver.currentRoute = '/checkout';
+    if (text === 'Select Address') driver.currentRoute = '/checkout/address';
+    if (text === 'Payment') driver.currentRoute = '/checkout/payment';
+    if (text === 'Filter') driver.currentRoute = '/products/filter';
     if (text === 'Sign Out' || text === 'Logout') {
       driver.isLoggedIn = false;
       driver.currentRoute = '/';
+      driver.inputs = {};
+      driver.showLoginError = false;
       console.log('[MOCK] Triggered Sign Out Action');
     }
     if (text === 'Login') {

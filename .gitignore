@@ -53,3 +53,5 @@ app.*.map.json
 /android/app/release
 .vercel
 supabase/.temp/
+appium_tests/reports/
+appium_tests/TEST_SUMMARY.md

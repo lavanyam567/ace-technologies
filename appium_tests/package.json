@@ -9,7 +9,9 @@
     "test:ui": "node runner.js --suite ui",
     "test:compatibility": "node runner.js --suite compatibility",
     "test:e2e": "node runner.js --suite e2e",
-    "test:all": "node runner.js --suite all"
+    "test:all": "node runner.js --suite all",
+    "test:mock": "cross-env APPIUM_MOCK=true node runner.js --suite all",
+    "summary": "cross-env REPORTS_DIR=reports SUMMARY_OUTPUT=TEST_SUMMARY.md node ../scripts/generate-markdown-summary.js"
   },
   "dependencies": {
     "webdriverio": "^8.39.0",

@@ -1,19 +1,17 @@
 'use strict';
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  Suite 1 · FUNCTIONAL TESTING
-//  Verifies that every core feature of the Ace Technologies app behaves correctly.
-// ─────────────────────────────────────────────────────────────────────────────
-
 const {
-  openRoute, assertReadablePage, assertAnyText,
-  clickText, fillInputByPlaceholder, wait
+  clickText,
+  fillInputByPlaceholder,
+  assertAnyText,
+  assertReadablePage,
+  wait,
 } = require('../utils/driver-helpers');
-const CONFIG = require('../config/test-config');
+const { prepareRoute, visitAndAssert, loginIfNeeded, logoutIfNeeded } = require('../utils/session-helpers');
+const { screenCatalog, coreNavPairs, authInputCases } = require('../config/mobile-test-catalog');
 
 const SUITE = 'Functional Testing';
 
-/** Build the list of functional test cases. */
 function makeCases() {
   const cases = [];
   let n = 1;
@@ -21,109 +19,131 @@ function makeCases() {
   const add = (title, area, route, expected, run, priority = 'High') =>
     cases.push({ id: id(), suite: SUITE, title, area, route, expected, priority, run });
 
-  // ── 1. Screen Rendering ────────────────────────────────────────────────────
-  const coreScreens = [
-    ['/', 'Home', ['Ace Technologies', 'Home Screen', 'One-Stop Solution']],
-    ['/products', 'Products', ['Products', 'Products Screen']],
-    ['/services', 'Services', ['Services', 'Services Screen']],
-    ['/about', 'About', ['About Us', 'Our Objective']],
-    ['/cart', 'Cart', ['Shopping Cart', 'cart']],
-    ['/account', 'Account', ['Account', 'Login to your account']],
-  ];
-
-  for (const [route, name, expected] of coreScreens) {
-    add(`${name} screen renders correctly`, 'Screen Rendering', route,
-      expected.join(' | '),
+  for (const screen of screenCatalog) {
+    add(
+      `${screen.area} screen renders with readable content`,
+      'Route Rendering',
+      screen.route,
+      screen.anchors.join(' | '),
       async (driver) => {
-        await openRoute(driver, route);
-        await assertReadablePage(driver);
-        await assertAnyText(driver, expected);
-      });
+        await visitAndAssert(driver, screen);
+      },
+      screen.loginRequired ? 'Critical' : 'High'
+    );
+
+    for (const anchor of screen.anchors) {
+      add(
+        `${screen.area} screen exposes "${anchor}"`,
+        'Content Anchors',
+        screen.route,
+        anchor,
+        async (driver) => {
+          await prepareRoute(driver, screen);
+          await assertAnyText(driver, anchor);
+        },
+        'Medium'
+      );
+    }
   }
 
-  // ── 2. Screen Navigation ──────────────────────────────────────────────────
-  const navTargets = [
-    ['Products', '/products', ['Products', 'Products Screen']],
-    ['Services', '/services', ['Services', 'Services Screen']],
-    ['About Us', '/about', ['About Us', 'Our Objective']],
-    ['Cart', '/cart', ['Shopping Cart', 'cart']],
-    ['Account', '/account', ['Account', 'Login to your account']],
-  ];
-
-  for (const [label, route, expected] of navTargets) {
-    add(`Navigation: clicking bottom bar/menu "${label}" navigates correctly`, 'Navigation', '/',
+  for (const [fromRoute, label, toRoute] of coreNavPairs) {
+    add(
+      `Navigation label "${label}" moves from ${fromRoute} to ${toRoute}`,
+      'Primary Navigation',
+      fromRoute,
       label,
       async (driver) => {
-        await openRoute(driver, '/');
+        const fromScreen = screenCatalog.find((item) => item.route === fromRoute) || screenCatalog[0];
+        const toScreen = screenCatalog.find((item) => item.route === toRoute) || screenCatalog[0];
+        await prepareRoute(driver, fromScreen);
         await clickText(driver, label);
-        await assertAnyText(driver, expected);
-      });
+        await assertAnyText(driver, toScreen.anchors);
+      }
+    );
   }
 
-  // ── 3. Home Screen Branding ───────────────────────────────────────────────
-  add('Home screen shows brand and objective', 'Branding', '/',
-    'One-Stop Solution & Ace Technologies',
-    async (driver) => {
-      await openRoute(driver, '/');
-      await assertAnyText(driver, ['Ace Technologies', 'One-Stop Solution']);
-    }, 'Medium');
-
-  // ── 4. About Screen Content ───────────────────────────────────────────────
-  const aboutSections = [
-    'Our Objective', 'Our Philosophy', 'Capabilities', 'Muralidharan P',
-    'Chennai', 'HP Compaq', 'Samsung', 'Dahua', 'Hikvision'
-  ];
-  for (const text of aboutSections) {
-    add(`About Us screen displays details: "${text}"`, 'About Info', '/about', text,
+  for (const testInput of authInputCases) {
+    add(
+      `Authentication validation path: ${testInput.label}`,
+      'Authentication',
+      '/account',
+      testInput.expected,
       async (driver) => {
-        await openRoute(driver, '/about');
-        await assertAnyText(driver, text);
-      }, 'Medium');
+        await logoutIfNeeded(driver);
+        await prepareRoute(driver, screenCatalog.find((item) => item.route === '/account'));
+        if (testInput.email) {
+          await fillInputByPlaceholder(driver, 'Email', testInput.email);
+        }
+        if (testInput.password) {
+          await fillInputByPlaceholder(driver, 'Password', testInput.password);
+        }
+        await clickText(driver, 'Login');
+        await wait(500);
+        await assertAnyText(driver, testInput.expected);
+      }
+    );
   }
 
-  // ── 5. Account Screen Guest Interface ─────────────────────────────────────
-  add('Account screen guest view shows credentials input', 'Guest Interface', '/account',
-    'Email, Password and Login options',
+  add(
+    'Guest user can open sign-up screen from account',
+    'Authentication',
+    '/account',
+    'Sign Up',
     async (driver) => {
-      await openRoute(driver, '/account');
-      await assertAnyText(driver, ['Email', 'Password', 'Login', 'Create account']);
-    });
-
-  // ── 6. Login Validation ───────────────────────────────────────────────────
-  add('Login: submit without inputs triggers validation error', 'Authentication', '/account',
-    'Enter email and password error banner',
-    async (driver) => {
-      await openRoute(driver, '/account');
-      await clickText(driver, 'Login');
-      await assertAnyText(driver, 'Enter email and password');
-    });
-
-  add('Login: invalid format email triggers input format error', 'Authentication', '/account',
-    'Invalid format validation',
-    async (driver) => {
-      await openRoute(driver, '/account');
-      await fillInputByPlaceholder(driver, 'Email', CONFIG.credentials.invalidEmail);
-      await fillInputByPlaceholder(driver, 'Password', CONFIG.credentials.invalidPassword);
-      await clickText(driver, 'Login');
-      await assertReadablePage(driver);
-    }, 'High');
-
-  // ── 7. Sign Up Navigation ─────────────────────────────────────────────────
-  add('Account: clicking "Create account" navigates to Sign Up screen', 'Authentication', '/account',
-    'Sign Up Screen',
-    async (driver) => {
-      await openRoute(driver, '/account');
+      await logoutIfNeeded(driver);
+      await prepareRoute(driver, screenCatalog.find((item) => item.route === '/account'));
       await clickText(driver, 'Create account');
       await assertAnyText(driver, ['Sign Up', 'Create Account', 'Signup']);
-    });
+    }
+  );
 
-  // ── 8. Empty Cart Initial View ────────────────────────────────────────────
-  add('Cart screen guest shows empty shopping cart', 'Cart empty state', '/cart',
-    'Shopping Cart empty state text',
+  add(
+    'Valid user can log in and profile shell becomes visible',
+    'Authentication',
+    '/account',
+    'Profile or Logout',
     async (driver) => {
-      await openRoute(driver, '/cart');
-      await assertAnyText(driver, ['Shopping Cart', 'Your cart is empty']);
-    });
+      await logoutIfNeeded(driver);
+      await loginIfNeeded(driver);
+      await assertReadablePage(driver);
+      await assertAnyText(driver, ['Profile', 'Logout', 'Account']);
+      await logoutIfNeeded(driver);
+    },
+    'Critical'
+  );
+
+  add(
+    'Logged-in user can open each account feature screen in sequence',
+    'Account Features',
+    '/profile',
+    'Profile, Wishlist, Compare, Recent, Settings, Orders, Service History',
+    async (driver) => {
+      await loginIfNeeded(driver);
+      const featureRoutes = ['/profile', '/wishlist', '/compare', '/recent', '/settings', '/orders', '/service-history'];
+      for (const route of featureRoutes) {
+        const screen = screenCatalog.find((item) => item.route === route);
+        await prepareRoute(driver, screen);
+        await assertAnyText(driver, screen.anchors);
+      }
+      await logoutIfNeeded(driver);
+    },
+    'Critical'
+  );
+
+  add(
+    'Checkout shell routes remain readable for guest users',
+    'Checkout',
+    '/checkout',
+    'Checkout route family remains readable',
+    async (driver) => {
+      const checkoutRoutes = ['/cart', '/checkout', '/checkout/address', '/checkout/payment'];
+      for (const route of checkoutRoutes) {
+        const screen = screenCatalog.find((item) => item.route === route);
+        await prepareRoute(driver, screen);
+        await assertReadablePage(driver);
+      }
+    }
+  );
 
   return cases;
 }

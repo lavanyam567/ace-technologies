@@ -5,8 +5,12 @@ const path = require('path');
 const XLSX = require('xlsx');
 
 // Configuration
-const REPORTS_DIR = path.resolve(__dirname, '../reports');
-const OUTPUT_PATH = path.resolve(__dirname, '../TEST_SUMMARY.md');
+const REPORTS_DIR = process.env.REPORTS_DIR
+  ? path.resolve(process.env.REPORTS_DIR)
+  : path.resolve(__dirname, '../reports');
+const OUTPUT_PATH = process.env.SUMMARY_OUTPUT
+  ? path.resolve(process.env.SUMMARY_OUTPUT)
+  : path.resolve(__dirname, '../TEST_SUMMARY.md');
 
 function findLatestReport() {
   if (!fs.existsSync(REPORTS_DIR)) {

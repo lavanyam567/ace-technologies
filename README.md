@@ -54,6 +54,25 @@ Recommended GitHub repository secrets:
 If secrets are not set, the workflow falls back to placeholder values so the
 report pipeline can still run for route-level UI coverage.
 
+## CI Mobile Appium Report
+
+Android mobile coverage now has a separate Appium pipeline in
+`.github/workflows/mobile-appium-report.yml`. That workflow:
+
+- builds the Flutter Android debug APK with a generated `env.ci.json`
+- boots a GitHub Actions Android emulator
+- starts Appium with the `uiautomator2` driver
+- runs the separate `appium_tests` suite with `301` generated cases across
+  functional, UI/UX, compatibility, and E2E coverage
+- uploads `appium_tests/reports/*.xlsx`, `appium_tests/reports/evidence/**`,
+  `appium_tests/TEST_SUMMARY.md`, and the Appium server log as artifacts
+
+Additional recommended GitHub repository secrets for real mobile login coverage:
+
+- `TEST_EMAIL`
+- `TEST_PASSWORD`
+- `ADMIN_EMAIL`
+
 ## Production Checklist
 
 - Use live Razorpay keys and webhook secrets.
