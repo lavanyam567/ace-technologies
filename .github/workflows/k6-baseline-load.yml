@@ -84,9 +84,4 @@ jobs:
             echo "### ⚠️ WARNING: k6 baseline Excel report was not generated!" >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      - name: Create report badge and metadata
-        if: always()
-        run: |
-          echo "K6_RUN_ID=${{ github.run_id }}" >> $GITHUB_ENV
-          echo "K6_REPORT_NAME=k6-baseline-report-${{ github.run_number }}" >> $GITHUB_ENV
-          echo "K6_TEST_TIMESTAMP=$(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_ENV
+
