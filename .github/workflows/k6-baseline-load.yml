@@ -41,8 +41,8 @@ jobs:
           K6_ENV_FILE: env.ci.json
           BASELINE_VUS: '100'
           BASELINE_DURATION: '1m'
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://bjjvvqlztmfjskxsykmz.supabase.co' }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || 'sb_publishable_SnFXOvSnXEqQ_3cLPVX0lw_4zqjwyyf' }}
         run: |
           node scripts/create-ci-env.js
           npm run test:k6:baseline
