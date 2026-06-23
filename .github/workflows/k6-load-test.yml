@@ -32,13 +32,13 @@ jobs:
 
       - name: Run k6 Load Test
         run: |
-          # We run the test and output the summary to a JSON file
-          k6 run --summary-export=summary.json k6_tests/load-test.js
+          # Run the custom progress logger script
+          node k6_tests/run-load-test.js
 
       - name: Generate XLSX Report
         run: |
           # Use your existing report generator script
-          node k6_tests/generate-xlsx-report.js summary.json
+          node k6_tests/generate-xlsx-report.js k6_tests/summary.json
 
       - name: Upload XLSX Report
         uses: actions/upload-artifact@v4
