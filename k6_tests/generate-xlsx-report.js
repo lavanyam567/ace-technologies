@@ -45,17 +45,17 @@ function thresholdState(name) {
 
 const httpReqs = metricValues('http_reqs');
 const httpReqDuration = metricValues('http_req_duration');
-const checks = metricValues('checks');
-const failedRate = metricValues('failed_requests');
-const vusMax = metricValues('vus_max');
-const vus = metricValues('vus');
+const checks = metricValues('checks') || { rate: 0 };
+const failedRate = metricValues('http_req_failed') || { rate: 0 };
+const vusMax = metricValues('vus_max') || { max: 0 };
+const vus = metricValues('vus') || { value: 0 };
 const runDurationMs = summary.state && summary.state.testRunDurationMs ? summary.state.testRunDurationMs : 0;
 
 const dashboardRows = [
-  ['ACE TECHNOLOGIES - K6 BASELINE LOAD TEST REPORT'],
+  ['ACE TECHNOLOGIES - K6 LOAD TEST REPORT'],
   [],
-  ['Scenario', 'Baseline / Load Testing'],
-  ['Virtual Users', vusMax.max || vus.max || vus.value || 0],
+  ['Scenario', 'Load Testing'],
+  ['Virtual Users (Max)', vusMax.max || vus.max || vus.value || 0],
   ['Configured Duration', `${Math.round(runDurationMs / 1000)} seconds`],
   ['Total Requests', httpReqs.count || 0],
   ['Requests Per Second (RPS)', Number(httpReqs.rate || 0).toFixed(2)],
@@ -93,7 +93,7 @@ const endpointRows = endpointMetricNames.map(([label, metricName]) => {
     'P95 (ms)': Number(values['p(95)'] || 0).toFixed(2),
     Thresholds: thresholdState(metricName),
   };
-});
+}).filter(row => row['Average (ms)'] !== '0.00' || row['Maximum (ms)'] !== '0.00');
 
 function flattenChecks(group, acc = []) {
   if (!group) return acc;
