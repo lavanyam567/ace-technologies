@@ -22,9 +22,13 @@ if (!fs.existsSync(absoluteSummaryPath)) {
 
 const summary = JSON.parse(fs.readFileSync(absoluteSummaryPath, 'utf8'));
 const metrics = summary.metrics || {};
-const resultsDir = path.dirname(absoluteSummaryPath);
-const startedAt = path.basename(absoluteSummaryPath).replace(/^baseline_summary_/, '').replace(/\.json$/i, '');
-const workbookPath = path.join(resultsDir, `baseline_report_${startedAt}.xlsx`);
+
+// Make sure output goes to k6_tests/results/load-test-report.xlsx
+const resultsDir = path.join(__dirname, 'results');
+if (!fs.existsSync(resultsDir)) {
+  fs.mkdirSync(resultsDir, { recursive: true });
+}
+const workbookPath = path.join(resultsDir, 'load-test-report.xlsx');
 
 function metricValues(name) {
   if (!metrics[name]) return {};
