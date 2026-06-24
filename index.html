@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="/">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="Ace Technologies - IT and Security Solutions">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Ace Technologies">
+
+  <link rel="apple-touch-icon" href="icons/Icon-192.png?v=20260612-logo2">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/Icon-192.png?v=20260612-logo2">
+  <link rel="shortcut icon" type="image/png" href="favicon.png?v=20260612-logo2">
+  <link rel="manifest" href="manifest.json?v=20260612-logo2">
+
+  <title>Ace Technologies - IT & Security Solutions</title>
+
+  <style>
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      background: #f4f7fb;
+      font-family: Arial, sans-serif;
+    }
+
+    .loading-screen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f4f7fb;
+      color: #172033;
+    }
+
+    .loading-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .loading-spinner {
+      width: 36px;
+      height: 36px;
+      border: 4px solid #dce5f2;
+      border-top-color: #0f8a70;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+
+    .loading-text {
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .loading-subtext {
+      font-size: 13px;
+      color: #637083;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="loading-screen">
+    <div class="loading-content">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">Ace Technologies</div>
+      <div class="loading-subtext">Loading...</div>
+    </div>
+  </div>
+
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script src="https://www.noupe.com/embed/019eb7726a167d818eb5a0adccad28d97996.js"></script>
+  <script src="flutter_bootstrap.js" async></script>
+
+  <noscript>
+    <p>This application requires JavaScript to be enabled.</p>
+  </noscript>
+</body>
+</html>
