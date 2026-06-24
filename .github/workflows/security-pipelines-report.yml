@@ -10,8 +10,11 @@ on:
 jobs:
   security-pipelines-report:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
     env:
-      NODE_PATH: ${{ github.workspace }}/automated_test/node_modules
+      NODE_PATH: ${{ github.workspace }}/frontend/automated_test/node_modules
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -25,13 +28,13 @@ jobs:
         run: npm --prefix automated_test install
 
       - name: Generate web security review
-        run: node automated_test/scripts/generateWebSecuritySuite.js
+        run: node frontend/automated_test/scripts/generateWebSecuritySuite.js
 
       - name: Generate backend security review
-        run: node automated_test/scripts/generateBackendSecuritySuite.js
+        run: node frontend/automated_test/scripts/generateBackendSecuritySuite.js
 
       - name: Generate security pipelines workbook
-        run: node automated_test/scripts/generateSecurityPipelinesReport.js
+        run: node frontend/automated_test/scripts/generateSecurityPipelinesReport.js
 
       - name: Append pipeline report summary to GHA summary
         if: always()
@@ -39,12 +42,12 @@ jobs:
           echo "### Security Pipelines Workbook Generated" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "- Workbook: security-pipelines-report.xlsx" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Web source: automated_test/reports/web-security-findings.xlsx" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Backend source: automated_test/reports/findings.xlsx" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Web source: frontend/automated_test/reports/web-security-findings.xlsx" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Backend source: frontend/automated_test/reports/findings.xlsx" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload security pipelines workbook
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: security-pipelines-report-${{ github.run_number }}
-          path: automated_test/reports/security-pipelines-report.xlsx
+          path: frontend/automated_test/reports/security-pipelines-report.xlsx

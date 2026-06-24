@@ -18,6 +18,9 @@ permissions:
 jobs:
   deploy-pages:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
     timeout-minutes: 30
     environment:
       name: github-pages
@@ -40,7 +43,7 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: selenium_tests/package-lock.json
+          cache-dependency-path: frontend/selenium_tests/package-lock.json
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
@@ -72,7 +75,7 @@ jobs:
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: build/web
+          path: frontend/build/web
 
       - name: Deploy to GitHub Pages
         id: deployment
@@ -81,6 +84,9 @@ jobs:
   generate-report:
     needs: deploy-pages
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
     timeout-minutes: 45
 
     steps:
@@ -92,7 +98,7 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: selenium_tests/package-lock.json
+          cache-dependency-path: frontend/selenium_tests/package-lock.json
 
       - name: Install Chrome
         uses: browser-actions/setup-chrome@v1
@@ -131,15 +137,15 @@ jobs:
         with:
           name: selenium-full-suite-report-${{ github.run_number }}
           path: |
-            selenium_tests/reports/*.xlsx
-            selenium_tests/reports/evidence/**
+            frontend/selenium_tests/reports/*.xlsx
+            frontend/selenium_tests/reports/evidence/**
           if-no-files-found: warn
           retention-days: 14
 
       - name: Publish Selenium report summary to Job Summary
         if: always()
         run: |
-          latest_report=$(ls -t selenium_tests/reports/*.xlsx 2>/dev/null | head -n 1 || true)
+          latest_report=$(ls -t frontend/selenium_tests/reports/*.xlsx 2>/dev/null | head -n 1 || true)
           if [ -n "$latest_report" ]; then
             {
               echo "### Selenium full-suite report generated"

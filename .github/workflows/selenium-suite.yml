@@ -16,6 +16,9 @@ permissions:
 jobs:
   selenium-suite:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
     timeout-minutes: 20
 
     steps:
@@ -44,14 +47,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: selenium-test-report-${{ github.run_number }}
-          path: selenium_tests/reports/
+          path: frontend/selenium_tests/reports/
           if-no-files-found: warn
           retention-days: 14
 
       - name: Publish Selenium test summary to Job Summary
         if: always()
         run: |
-          if [ -d "selenium_tests/reports/" ] && [ -n "$(ls -A selenium_tests/reports/)" ]; then
+          if [ -d "frontend/selenium_tests/reports/" ] && [ -n "$(ls -A frontend/selenium_tests/reports/)" ]; then
             {
               echo "### Selenium test suite completed"
               echo ""

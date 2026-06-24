@@ -10,7 +10,10 @@ jobs:
   frontend-security:
     runs-on: ubuntu-latest
     env:
-      NODE_PATH: ${{ github.workspace }}/automated_test/node_modules
+      NODE_PATH: ${{ github.workspace }}/frontend/automated_test/node_modules
+    defaults:
+      run:
+        working-directory: frontend
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -33,7 +36,7 @@ jobs:
         run: npm --prefix automated_test install
 
       - name: Generate web security review
-        run: node automated_test/scripts/generateWebSecuritySuite.js
+        run: node frontend/automated_test/scripts/generateWebSecuritySuite.js
 
       - name: Create CI env file
         env:
@@ -45,18 +48,18 @@ jobs:
         run: node scripts/create-ci-env.js
 
       - name: Build Flutter web
-        run: flutter build web --release --dart-define-from-file=env.ci.json
+        run: flutter build web --release --dart-define-from-file=env.ci.json --base-href "/ace-technologies/"
 
       - name: Append frontend security summary to GHA summary
         if: always()
         run: |
-          cat automated_test/reports/web-executive-summary.md >> "$GITHUB_STEP_SUMMARY"
+          cat frontend/automated_test/reports/web-executive-summary.md >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          cat automated_test/reports/web-security-review.md >> "$GITHUB_STEP_SUMMARY"
+          cat frontend/automated_test/reports/web-security-review.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Enforce zero-critical security gate
         run: |
-          critical_count=$(grep -oE 'Critical Findings: [0-9]+' automated_test/reports/web-executive-summary.md | grep -oE '[0-9]+' | head -n 1)
+          critical_count=$(grep -oE 'Critical Findings: [0-9]+' frontend/automated_test/reports/web-executive-summary.md | grep -oE '[0-9]+' | head -n 1)
           critical_count=${critical_count:-0}
           echo "Critical findings detected: $critical_count"
           if [ "$critical_count" -gt 0 ]; then
@@ -70,13 +73,13 @@ jobs:
         with:
           name: frontend-security-review-${{ github.run_number }}
           path: |
-            automated_test/reports/web-security-findings.xlsx
-            automated_test/reports/web-security-review.md
-            automated_test/reports/web-executive-summary.md
+            frontend/automated_test/reports/web-security-findings.xlsx
+            frontend/automated_test/reports/web-security-review.md
+            frontend/automated_test/reports/web-executive-summary.md
 
       - name: Upload frontend Excel report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: frontend-security-excel-${{ github.run_number }}
-          path: automated_test/reports/web-security-findings.xlsx
+          path: frontend/automated_test/reports/web-security-findings.xlsx
