@@ -3,9 +3,18 @@ const path = require('path');
 
 const outputPath = path.resolve(__dirname, '../env.ci.json');
 
+const requiredVars = ['SUPABASE_URL', 'SUPABASE_ANON_KEY'];
+const missingRequiredVars = requiredVars.filter((name) => !process.env[name]);
+
+if (missingRequiredVars.length > 0) {
+  throw new Error(
+    `Missing required CI environment variables: ${missingRequiredVars.join(', ')}.`,
+  );
+}
+
 const env = {
-  SUPABASE_URL: process.env.SUPABASE_URL || 'https://your-project.supabase.co',
-  SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || 'your-supabase-anon-key',
+  SUPABASE_URL: process.env.SUPABASE_URL,
+  SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
   PAYMENT_GATEWAY: process.env.PAYMENT_GATEWAY || 'razorpay',
   RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || 'rzp_test_your_key_id',
   APP_REDIRECT_URL: process.env.APP_REDIRECT_URL || 'http://127.0.0.1:4173',

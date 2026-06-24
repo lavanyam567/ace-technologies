@@ -35,6 +35,15 @@ jobs:
       - name: Generate web security review
         run: node automated_test/scripts/generateWebSecuritySuite.js
 
+      - name: Create CI env file
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          PAYMENT_GATEWAY: ${{ secrets.PAYMENT_GATEWAY }}
+          RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID }}
+          APP_REDIRECT_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+        run: node scripts/create-ci-env.js
+
       - name: Build Flutter web
         run: flutter build web --release --dart-define-from-file=env.ci.json
 
