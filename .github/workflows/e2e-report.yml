@@ -145,7 +145,7 @@ jobs:
       - name: Publish Selenium report summary to Job Summary
         if: always()
         run: |
-          latest_report=$(ls -t frontend/selenium_tests/reports/*.xlsx 2>/dev/null | head -n 1 || true)
+          latest_report=$(ls -t selenium_tests/reports/*.xlsx 2>/dev/null | head -n 1 || true)
           if [ -n "$latest_report" ]; then
             {
               echo "### Selenium full-suite report generated"
