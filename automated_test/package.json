@@ -1,0 +1,14 @@
+{
+  "name": "ace-technologies-security-reports",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Security review generators for the Ace Technologies Flutter and Supabase stack",
+  "scripts": {
+    "security:web": "node scripts/generateWebSecuritySuite.js",
+    "security:backend": "node scripts/generateBackendSecuritySuite.js",
+    "security:pipelines": "node scripts/generateSecurityPipelinesReport.js"
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0"
+  }
+}

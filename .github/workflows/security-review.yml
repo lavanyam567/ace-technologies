@@ -1,0 +1,65 @@
+name: Backend Security Review
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  backend-security:
+    runs-on: ubuntu-latest
+    env:
+      NODE_PATH: ${{ github.workspace }}/automated_test/node_modules
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install security report dependencies
+        run: npm --prefix automated_test install
+
+      - name: Generate backend security review
+        run: node automated_test/scripts/generateBackendSecuritySuite.js
+
+      - name: Append backend security summary to GHA summary
+        if: always()
+        run: |
+          cat automated_test/reports/executive-summary.md >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          cat automated_test/reports/security-review.md >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          cat automated_test/reports/dependency-report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce zero-critical security gate
+        run: |
+          critical_count=$(grep -oE 'Critical Findings: [0-9]+' automated_test/reports/executive-summary.md | grep -oE '[0-9]+' | head -n 1)
+          critical_count=${critical_count:-0}
+          echo "Critical findings detected: $critical_count"
+          if [ "$critical_count" -gt 0 ]; then
+            echo "Zero-Critical Security Policy violated."
+            exit 1
+          fi
+
+      - name: Upload backend security artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-security-review-${{ github.run_number }}
+          path: |
+            automated_test/reports/findings.xlsx
+            automated_test/reports/security-review.md
+            automated_test/reports/dependency-report.md
+            automated_test/reports/executive-summary.md
+
+      - name: Upload backend Excel report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-security-excel-${{ github.run_number }}
+          path: automated_test/reports/findings.xlsx
