@@ -40,7 +40,7 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          npm run test:selenium
+          npm run test:e2e
 
       - name: Upload Selenium test artifacts
         if: always()
