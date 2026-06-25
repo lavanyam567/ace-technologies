@@ -54,7 +54,7 @@ jobs:
         run: node scripts/create-ci-env.js
 
       - name: Build Flutter web
-        run: flutter build web --release --dart-define-from-file=env.ci.json --base-href "/ace-technologies/"
+        run: flutter build web --release --dart-define-from-file=env.ci.json
 
       - name: Run Selenium tests
         env:
