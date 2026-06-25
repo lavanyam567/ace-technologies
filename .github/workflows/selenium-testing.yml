@@ -1,9 +1,6 @@
 name: Selenium Testing
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
