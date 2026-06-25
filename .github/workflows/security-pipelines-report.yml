@@ -28,13 +28,13 @@ jobs:
         run: npm --prefix automated_test install
 
       - name: Generate web security review
-        run: node frontend/automated_test/scripts/generateWebSecuritySuite.js
+        run: node automated_test/scripts/generateWebSecuritySuite.js
 
       - name: Generate backend security review
-        run: node frontend/automated_test/scripts/generateBackendSecuritySuite.js
+        run: node automated_test/scripts/generateBackendSecuritySuite.js
 
       - name: Generate security pipelines workbook
-        run: node frontend/automated_test/scripts/generateSecurityPipelinesReport.js
+        run: node automated_test/scripts/generateSecurityPipelinesReport.js
 
       - name: Append pipeline report summary to GHA summary
         if: always()
