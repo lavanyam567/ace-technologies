@@ -1,4 +1,4 @@
-name: Web E2E Test Suite
+name: Selenium Testing
 
 on:
   push:
@@ -12,7 +12,7 @@ permissions:
   id-token: write
 
 jobs:
-  web-e2e-tests:
+  selenium-testing:
     runs-on: ubuntu-latest
     defaults:
       run:
