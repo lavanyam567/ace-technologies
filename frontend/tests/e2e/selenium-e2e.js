@@ -59,19 +59,39 @@ function slugify(text) {
 
 async function pageText(driver) {
   return driver.executeScript(`
-    if (!document.body) return "";
-    const values = [document.body.textContent || ""];
-    for (const el of document.body.querySelectorAll('flt-semantics, [aria-label], [placeholder], [title], [alt], input, textarea, button')) {
-      values.push(
-        el.getAttribute('aria-label') || '',
-        el.getAttribute('placeholder') || '',
-        el.getAttribute('title') || '',
-        el.getAttribute('alt') || '',
-        el.value || '',
-        el.textContent || ''
-      );
+    function extractText(node) {
+      let text = "";
+      if (node.nodeType === 3) {
+        text += node.textContent + " ";
+      }
+      
+      if (node.nodeType === 1) { // Element node
+        const ariaLabel = node.getAttribute('aria-label');
+        if (ariaLabel) text += ariaLabel + " ";
+        const placeholder = node.getAttribute('placeholder');
+        if (placeholder) text += placeholder + " ";
+        const title = node.getAttribute('title');
+        if (title) text += title + " ";
+        const alt = node.getAttribute('alt');
+        if (alt) text += alt + " ";
+        if (node.value) text += node.value + " ";
+      }
+
+      if (node.shadowRoot) {
+        text += extractText(node.shadowRoot);
+      }
+      
+      if (node.childNodes) {
+        for (let child of node.childNodes) {
+          text += extractText(child);
+        }
+      }
+      return text;
     }
-    return values.filter(Boolean).join("\\n");
+    
+    if (!document.body) return "";
+    const rawText = extractText(document.body);
+    return rawText.split("\\n").filter(Boolean).join("\\n");
   `);
 }
 

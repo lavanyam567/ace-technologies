@@ -20,29 +20,18 @@ jobs:
         with:
           node-version: 20
 
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-
-      - name: Audit NPM Dependencies
+      - name: Audit Backend Dependencies
         run: |
-          echo "Auditing frontend..."
-          npm --prefix frontend audit || true
-          echo "Auditing automated_test..."
-          npm --prefix frontend/automated_test audit || true
-          echo "Auditing selenium_tests..."
-          npm --prefix frontend/selenium_tests audit || true
+          cd backend
+          npm audit || true
 
-      - name: Audit Flutter Dependencies
+      - name: Audit Frontend Dependencies
         run: |
           cd frontend
-          flutter pub get
-          dart pub outdated --no-dev-dependencies --up-to-date
+          npm audit || true
 
-  security-tests:
-    name: 🩺 Security & Vulnerability Tests
+  e2e-security-tests:
+    name: 🩺 E2E Security & Vulnerability Tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -53,29 +42,47 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
-          cache-dependency-path: 'frontend/package-lock.json'
+          cache-dependency-path: |
+            frontend/package-lock.json
+            backend/package-lock.json
 
-      - name: Install Automated Test Dependencies
-        run: npm --prefix frontend/automated_test install
-
-      - name: Run Security Review Scripts
+      - name: Install & Start Backend Service
         run: |
-          npm --prefix frontend/automated_test run security:web
-          npm --prefix frontend/automated_test run security:backend
-          npm --prefix frontend/automated_test run security:pipelines
+          cd backend
+          npm ci
+          npm run dev &
+        env:
+          PORT: 5000
 
-      - name: Append Security Summaries to GHA Summary
-        if: always()
+      - name: Install & Build Frontend
         run: |
-          cat frontend/automated_test/reports/*-executive-summary.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
-          cat frontend/automated_test/reports/*-security-review.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+          cd frontend
+          npm ci
+          npm run build
 
-      - name: Upload Security Test Reports
+      - name: Start Vite Preview Server
+        run: |
+          cd frontend
+          npx vite preview --port 5173 --host 127.0.0.1 --base /Nutrixa-frontend/ &
+          echo "Waiting for Vite preview server to spin up..."
+          sleep 4
+          curl -I http://127.0.0.1:5173/Nutrixa-frontend/
+          echo "TEST_BASE_URL=http://127.0.0.1:5173/Nutrixa-frontend" >> $GITHUB_ENV
+
+      - name: Run E2E Security Tests
+        run: |
+          cd backend
+          npm install
+          npm run test:security
+        env:
+          TEST_BASE_URL: ${{ env.TEST_BASE_URL }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+          GITHUB_STEP_SUMMARY: ${{ env.GITHUB_STEP_SUMMARY }}
+
+      - name: Upload Security Test Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: security-test-reports
-          path: |
-            frontend/automated_test/reports/*.xlsx
-            frontend/automated_test/reports/*.md
+          name: security-test-report
+          path: backend/tests/security-test-report.xlsx
           retention-days: 30
