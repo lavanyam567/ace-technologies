@@ -53,10 +53,10 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
-          cache-dependency-path: 'frontend/automated_test/package-lock.json'
+          cache-dependency-path: 'frontend/package-lock.json'
 
       - name: Install Automated Test Dependencies
-        run: npm --prefix frontend/automated_test ci
+        run: npm --prefix frontend/automated_test install
 
       - name: Run Security Review Scripts
         run: |
