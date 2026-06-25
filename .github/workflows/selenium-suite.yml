@@ -53,8 +53,8 @@ jobs:
           APP_REDIRECT_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
         run: node scripts/create-ci-env.js
 
-      - name: Build Flutter web (HTML renderer for Selenium text extraction)
-        run: flutter build web --release --web-renderer html --dart-define-from-file=env.ci.json --base-href "/ace-technologies/"
+      - name: Build Flutter web
+        run: flutter build web --release --dart-define-from-file=env.ci.json --base-href "/ace-technologies/"
 
       - name: Run Selenium tests
         env:

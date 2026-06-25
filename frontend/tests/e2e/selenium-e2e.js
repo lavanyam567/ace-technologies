@@ -60,8 +60,8 @@ function slugify(text) {
 async function pageText(driver) {
   return driver.executeScript(`
     if (!document.body) return "";
-    const values = [document.body.innerText || ""];
-    for (const el of document.body.querySelectorAll('[aria-label], [placeholder], [title], [alt], input, textarea, button')) {
+    const values = [document.body.textContent || ""];
+    for (const el of document.body.querySelectorAll('flt-semantics, [aria-label], [placeholder], [title], [alt], input, textarea, button')) {
       values.push(
         el.getAttribute('aria-label') || '',
         el.getAttribute('placeholder') || '',
