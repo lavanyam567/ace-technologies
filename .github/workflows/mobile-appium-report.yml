@@ -83,10 +83,10 @@ jobs:
             adb devices
             nohup appium --port 4723 --base-path / > appium.log 2>&1 &
             adb wait-for-device
-            npm --prefix appium_tests run test:all
+            npm --prefix frontend/appium_tests run test:all
         env:
           APPIUM_MOCK: "false"
-          APP_APK_PATH: ${{ github.workspace }}/build/app/outputs/flutter-apk/app-debug.apk
+          APP_APK_PATH: ${{ github.workspace }}/frontend/build/app/outputs/flutter-apk/app-debug.apk
           TEST_EMAIL: ${{ secrets.TEST_EMAIL }}
           TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
           ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
@@ -108,12 +108,12 @@ jobs:
       - name: Publish Appium report summary to Job Summary
         if: always()
         run: |
-          latest_report=$(ls -t frontend/appium_tests/reports/*.xlsx 2>/dev/null | head -n 1 || true)
+          latest_report=$(ls -t appium_tests/reports/*.xlsx 2>/dev/null | head -n 1 || true)
           if [ -n "$latest_report" ]; then
             {
               echo "### Appium Android report generated"
               echo ""
-              echo "- APK: build/app/outputs/flutter-apk/app-debug.apk"
+              echo "- APK: frontend/build/app/outputs/flutter-apk/app-debug.apk"
               echo "- Report file: $(basename "$latest_report")"
               echo "- Covered suites: Functional, UI/UX, Compatibility, E2E"
               echo "- Planned cases: 301"
