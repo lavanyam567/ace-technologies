@@ -1,0 +1,81 @@
+name: 🛡️ Security & Vulnerability Scan
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  dependency-audit:
+    name: 🔍 Package Dependency Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Audit NPM Dependencies
+        run: |
+          echo "Auditing frontend..."
+          npm --prefix frontend audit || true
+          echo "Auditing automated_test..."
+          npm --prefix frontend/automated_test audit || true
+          echo "Auditing selenium_tests..."
+          npm --prefix frontend/selenium_tests audit || true
+
+      - name: Audit Flutter Dependencies
+        run: |
+          cd frontend
+          flutter pub get
+          dart pub outdated --no-dev-dependencies --up-to-date
+
+  security-tests:
+    name: 🩺 Security & Vulnerability Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: 'frontend/automated_test/package-lock.json'
+
+      - name: Install Automated Test Dependencies
+        run: npm --prefix frontend/automated_test ci
+
+      - name: Run Security Review Scripts
+        run: |
+          npm --prefix frontend/automated_test run security:web
+          npm --prefix frontend/automated_test run security:backend
+          npm --prefix frontend/automated_test run security:pipelines
+
+      - name: Append Security Summaries to GHA Summary
+        if: always()
+        run: |
+          cat frontend/automated_test/reports/*-executive-summary.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+          cat frontend/automated_test/reports/*-security-review.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+
+      - name: Upload Security Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-test-reports
+          path: |
+            frontend/automated_test/reports/*.xlsx
+            frontend/automated_test/reports/*.md
+          retention-days: 30
