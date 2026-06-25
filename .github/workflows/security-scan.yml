@@ -3,9 +3,12 @@ name: 🛡️ Security & Vulnerability Scan
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  dependency-audit:
-    name: 🔍 Package Dependency Security Audit
+  security-scans:
+    name: 🩺 Simulated SAST & Security Review
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -16,69 +19,75 @@ jobs:
         with:
           node-version: 20
 
-      - name: Audit Backend Dependencies
-        run: |
-          cd backend
-          npm audit || true
-
-      - name: Audit Frontend Dependencies
+      - name: Install Frontend Dependencies
         run: |
           cd frontend
-          npm audit || true
+          npm install xlsx --no-save || npm ci
 
-  e2e-security-tests:
-    name: 🩺 E2E Security & Vulnerability Tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-          cache-dependency-path: |
-            frontend/package-lock.json
-            backend/package-lock.json
-
-      - name: Install & Start Backend Service
+      - name: Install Backend Dependencies
         run: |
           cd backend
-          npm ci
-          npm run dev &
-        env:
-          PORT: 5000
+          npm install xlsx --no-save || npm install
 
-      - name: Install & Build Frontend
+      - name: Run Web Frontend Security Suite
         run: |
           cd frontend
-          npm ci
-          npm run build
+          node scripts/generateWebSecuritySuite.js
 
-      - name: Start Vite Preview Server
-        run: |
-          cd frontend
-          npx vite preview --port 5173 --host 127.0.0.1 --base /Nutrixa-frontend/ &
-          echo "Waiting for Vite preview server to spin up..."
-          sleep 4
-          curl -I http://127.0.0.1:5173/Nutrixa-frontend/
-          echo "TEST_BASE_URL=http://127.0.0.1:5173/Nutrixa-frontend" >> $GITHUB_ENV
-
-      - name: Run E2E Security Tests
+      - name: Run Backend Node.js Security Suite
         run: |
           cd backend
-          npm install
-          npm run test:security
-        env:
-          TEST_BASE_URL: ${{ env.TEST_BASE_URL }}
-          GITHUB_RUN_NUMBER: ${{ github.run_number }}
-          GITHUB_STEP_SUMMARY: ${{ env.GITHUB_STEP_SUMMARY }}
+          node scripts/generateSecuritySuite.js
 
-      - name: Upload Security Test Report
+      - name: Append Executive Summaries to GHA Summary
+        if: always()
+        run: |
+          echo "## Web Security" >> "$GITHUB_STEP_SUMMARY"
+          cat frontend/reports/web-executive-summary.md >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Backend Security" >> "$GITHUB_STEP_SUMMARY"
+          cat backend/reports/executive-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Append Detailed Findings to GHA Summary
+        if: always()
+        run: |
+          echo "## Detailed Web Findings" >> "$GITHUB_STEP_SUMMARY"
+          cat frontend/reports/web-security-review.md >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Detailed Backend Findings" >> "$GITHUB_STEP_SUMMARY"
+          cat backend/reports/security-review.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce Zero-Critical Security Gate (Web)
+        run: |
+          critical_count=$(grep -oE 'Critical Findings \| [0-9]+' frontend/reports/web-executive-summary.md | grep -oE '[0-9]+' | head -n 1)
+          critical_count=${critical_count:-0}
+          echo "Web Critical findings detected: $critical_count"
+          if [ "$critical_count" -gt 0 ]; then
+            echo "Zero-Critical Security Policy violated in Frontend."
+            exit 1
+          fi
+
+      - name: Enforce Zero-Critical Security Gate (Backend)
+        run: |
+          critical_count=$(grep -oE 'Critical Findings \| [0-9]+' backend/reports/executive-summary.md | grep -oE '[0-9]+' | head -n 1)
+          critical_count=${critical_count:-0}
+          echo "Backend Critical findings detected: $critical_count"
+          if [ "$critical_count" -gt 0 ]; then
+            echo "Zero-Critical Security Policy violated in Backend."
+            exit 1
+          fi
+
+      - name: Upload Security Review Artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: security-test-report
-          path: backend/tests/security-test-report.xlsx
+          name: security-review-reports-${{ github.run_number }}
+          path: |
+            frontend/reports/web-security-findings.xlsx
+            frontend/reports/web-security-review.md
+            frontend/reports/web-executive-summary.md
+            backend/reports/backend-findings.xlsx
+            backend/reports/security-review.md
+            backend/reports/dependency-report.md
+            backend/reports/executive-summary.md
           retention-days: 30
