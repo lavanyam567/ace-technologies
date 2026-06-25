@@ -1,9 +1,6 @@
 name: Deploy GitHub Pages and Run Full Selenium Report
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 concurrency:

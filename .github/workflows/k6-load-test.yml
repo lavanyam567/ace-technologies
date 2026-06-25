@@ -1,12 +1,6 @@
 name: K6 Load Test
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
   workflow_dispatch: # Allows manual trigger from the GitHub UI
 
 jobs:
