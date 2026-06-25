@@ -53,8 +53,8 @@ jobs:
           APP_REDIRECT_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
         run: node scripts/create-ci-env.js
 
-      - name: Build Flutter web
-        run: flutter build web --release --dart-define-from-file=env.ci.json --base-href "/ace-technologies/"
+      - name: Build Flutter web (HTML renderer for Selenium text extraction)
+        run: flutter build web --release --web-renderer html --dart-define-from-file=env.ci.json --base-href "/ace-technologies/"
 
       - name: Run Selenium tests
         env:
@@ -68,14 +68,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: selenium-test-report-${{ github.run_number }}
-          path: frontend/selenium_tests/reports/
+          path: frontend/reports/
           if-no-files-found: warn
           retention-days: 14
 
       - name: Publish Selenium test summary to Job Summary
         if: always()
         run: |
-          if [ -d "selenium_tests/reports/" ] && [ -n "$(ls -A selenium_tests/reports/)" ]; then
+          if [ -d "reports/" ] && [ -n "$(ls -A reports/)" ]; then
             {
               echo "### Selenium test suite completed"
               echo ""
