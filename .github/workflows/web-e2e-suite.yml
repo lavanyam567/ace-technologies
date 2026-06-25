@@ -1,0 +1,56 @@
+name: Web E2E Test Suite
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  web-e2e-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run Web E2E Test Suite (1,100 Assertions)
+        run: |
+          npm install mocha selenium-webdriver xlsx --no-save
+          npx vite preview --port 5173 --host 127.0.0.1 --base /ace-technologies/ &
+          echo "Waiting for Vite preview server to spin up..."
+          sleep 4
+          curl -I http://127.0.0.1:5173/ace-technologies/ || true
+          echo "TEST_BASE_URL=http://127.0.0.1:5173/ace-technologies/" >> $GITHUB_ENV
+          npx mocha tests/e2e/mega_web_1100.test.js --reporter ./scripts/excelReporter.js || true
+
+      - name: Inject Reports into dist/
+        run: |
+          mkdir -p dist/reports/latest
+          mkdir -p dist/reports/history/build-${{ github.run_number }}
+          cp dist/reports/latest/execution-report.html dist/reports/history/build-${{ github.run_number }}/execution-report.html || true
+
+      - name: Append E2E summary to GHA summary
+        if: always()
+        run: node scripts/generate-markdown-summary.js || true
+
+      - name: Upload E2E Test Reports Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-e2e-reports-${{ github.run_number }}
+          path: |
+            frontend/dist/reports/latest/execution-report.html
+            frontend/dist/reports/latest/selenium-report.xlsx

@@ -55,27 +55,6 @@ jobs:
       - name: Build Flutter web
         run: flutter build web --release --dart-define-from-file=env.ci.json --base-href "/ace-technologies/"
 
-      - name: Run Web E2E Test Suite (1,100 Assertions)
-        run: |
-          npm install mocha selenium-webdriver xlsx --no-save
-          npx vite preview --port 5173 --host 127.0.0.1 --base /ace-technologies/ &
-          echo "Waiting for Vite preview server to spin up..."
-          sleep 4
-          curl -I http://127.0.0.1:5173/ace-technologies/ || true
-          echo "TEST_BASE_URL=http://127.0.0.1:5173/ace-technologies/" >> $GITHUB_ENV
-          npx mocha tests/e2e/mega_web_1100.test.js --reporter ./scripts/excelReporter.js || true
-
-      - name: Inject Reports into dist/
-        run: |
-          mkdir -p dist
-          cp -R build/web/* dist/ || true
-          mkdir -p dist/reports/history/build-${{ github.run_number }}
-          cp dist/reports/latest/execution-report.html dist/reports/history/build-${{ github.run_number }}/execution-report.html || true
-
-      - name: Append E2E summary to GHA summary
-        if: always()
-        run: node scripts/generate-markdown-summary.js || true
-
       - name: Append frontend security summary to GHA summary
         if: always()
         run: |
@@ -113,7 +92,7 @@ jobs:
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: frontend/dist
+          path: frontend/build/web
 
   deploy-to-pages:
     needs: frontend-security
