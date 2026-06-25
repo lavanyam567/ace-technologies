@@ -35,6 +35,27 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
 
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Create CI env file
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          PAYMENT_GATEWAY: ${{ secrets.PAYMENT_GATEWAY }}
+          RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID }}
+          APP_REDIRECT_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+        run: node scripts/create-ci-env.js
+
+      - name: Build Flutter web
+        run: flutter build web --release --dart-define-from-file=env.ci.json --base-href "/ace-technologies/"
+
       - name: Run Selenium tests
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
