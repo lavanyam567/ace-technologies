@@ -6,6 +6,11 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   frontend-security:
     runs-on: ubuntu-latest
@@ -83,3 +88,19 @@ jobs:
         with:
           name: frontend-security-excel-${{ github.run_number }}
           path: frontend/automated_test/reports/web-security-findings.xlsx
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/build/web
+
+  deploy-to-pages:
+    needs: frontend-security
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
