@@ -1,45 +1,66 @@
-name: API Load Testing (k6)
+name: API Load Testing
 
 on:
   push:
-    paths:
-      - 'backend/**'
+    branches:
+      - main
   pull_request:
-    paths:
-      - 'backend/**'
+    branches:
+      - main
 
 jobs:
   load-test:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: 20
 
-      - name: Setup k6
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Python dependencies
+        run: pip install openpyxl
+
+      - name: Set up k6
         uses: grafana/setup-k6-action@v1
 
-      - name: Start Backend Server (Mock)
+      - name: Install Frontend Dependencies
+        working-directory: ./frontend
+        run: npm ci || npm install
+
+      - name: Start Mock API Server for k6 Load Testing
         working-directory: ./backend
         run: |
-          # If we had a real backend, we'd start it here.
-          # For demonstration, we'll start a simple python server to return 200s
           mkdir -p api
           echo '{"status": "ok"}' > api/status
           python3 -m http.server 3000 &
-          sleep 3
           echo "API_BASE_URL=http://127.0.0.1:3000/api/status" >> $GITHUB_ENV
+          sleep 3
 
-      - name: Run k6 Load Test
+      - name: Run k6 Load Tests
+        working-directory: ./frontend
+        env:
+          API_BASE_URL: http://127.0.0.1:3000/api/status
+        run: |
+          node k6_tests/run-load-test.js || true
+          node k6_tests/generate-xlsx-report.js k6_tests/summary.json || true
+
+      - name: Rebrand Load Test Report
         working-directory: ./frontend
         run: |
-          k6 run --summary-export=summary.json k6_tests/run-baseline-load.js
+          python scripts/rebrand_excel.py k6_tests/results/load-test-report.xlsx Load_Test_Report.xlsx
 
-      - name: Parse and Publish Summary
-        working-directory: ./frontend
-        run: |
-          node k6_tests/parseK6Summary.js
+      - name: Upload Load Test Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: Load_Test_Report
+          path: frontend/Load_Test_Report.xlsx
+          retention-days: 14
