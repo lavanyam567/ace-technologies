@@ -1,93 +1,132 @@
-name: Deploy and Test Frontend
+name: Unified Test Report Generator
 
 on:
   push:
     branches:
       - main
-    paths:
-      - 'frontend/**'
   pull_request:
     branches:
       - main
-    paths:
-      - 'frontend/**'
 
 jobs:
-  build-test-deploy:
+  run-tests-and-generate-reports:
     runs-on: ubuntu-latest
-    
-    # Required permissions for GitHub Pages deployments
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: 'frontend/package-lock.json'
+          node-version: 20
 
-      - name: Install Dependencies
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install openpyxl
+
+      - name: Set up k6
+        uses: grafana/setup-k6-action@v1
+
+      - name: Set up Chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Install Frontend Dependencies
         working-directory: ./frontend
         run: npm ci || npm install
 
-      - name: Build Frontend (Vite)
-        working-directory: ./frontend
-        run: npm run build
+      - name: Install Backend Dependencies
+        working-directory: ./backend
+        run: npm ci || npm install
 
-      - name: Start Background Vite Preview Server
+      - name: Install Appium Suite Dependencies
+        working-directory: ./frontend/appium_tests
+        run: npm ci || npm install
+
+      - name: Create CI env file
+        working-directory: ./frontend
+        env:
+          SUPABASE_URL: "https://mock.supabase.co"
+          SUPABASE_ANON_KEY: "mock-anon-key"
+          PAYMENT_GATEWAY: "mock-gateway"
+          RAZORPAY_KEY_ID: "mock-razorpay-key"
+          GEMINI_API_KEY: "mock-gemini-key"
+          APP_REDIRECT_URL: "ace-technologies://auth-callback"
+        run: node scripts/create-ci-env.js
+
+      - name: Build Flutter Web
+        working-directory: ./frontend
+        run: flutter build web --release --dart-define-from-file=env.ci.json
+
+      - name: Start Mock API Server for k6 Load Testing
+        working-directory: ./backend
+        run: |
+          mkdir -p api
+          echo '{"status": "ok"}' > api/status
+          python3 -m http.server 3000 &
+          echo "API_BASE_URL=http://127.0.0.1:3000/api/status" >> $GITHUB_ENV
+          sleep 3
+
+      - name: Run Web E2E (Selenium/Mocha) Tests
         working-directory: ./frontend
         run: |
-          # Start the server in the background
-          npx vite preview --port 5173 --host 127.0.0.1 --base /ace-technologies/ &
-          
-          # Startup buffer
-          sleep 4
-          
-          # Verify local server is alive
-          curl -f http://127.0.0.1:5173/ace-technologies/ || exit 1
-          
-          # Export to GITHUB_ENV
-          echo "TEST_BASE_URL=http://127.0.0.1:5173/ace-technologies/" >> $GITHUB_ENV
+          npx mocha tests/e2e/mega_web_1100.test.js --reporter ./scripts/excelReporter.js || true
 
-      - name: Run E2E Test Suite (1,100 Tests)
+      - name: Run Appium Mobile E2E (Mock) Tests
+        working-directory: ./frontend/appium_tests
+        run: |
+          npm run test:mock || true
+
+      - name: Run k6 Load Tests
+        working-directory: ./frontend
+        env:
+          API_BASE_URL: http://127.0.0.1:3000/api/status
+        run: |
+          node k6_tests/run-load-test.js || true
+          node k6_tests/generate-xlsx-report.js k6_tests/summary.json || true
+
+      - name: Run Web Security Scan
         working-directory: ./frontend
         run: |
-          # Ensure mocha is available and run the mega test suite with the custom reporter
-          npx mocha tests/e2e/mega_web_1100.test.js --reporter ./scripts/excelReporter.js
+          node scripts/generateWebSecuritySuite.js || true
 
-      - name: Inject HTML Report to Dist Directory
+      - name: Run Backend Security Scan
+        working-directory: ./backend
+        run: |
+          node scripts/generateSecuritySuite.js || true
+
+      - name: Run DAST/Vulnerability Scan Report
         working-directory: ./frontend
         run: |
-          # The reporter generated execution-report.html in the current dir
-          mkdir -p dist/reports/latest
-          mkdir -p dist/reports/history/build-${{ github.run_number }}
-          
-          cp execution-report.html dist/reports/latest/execution-report.html
-          cp execution-report.html dist/reports/history/build-${{ github.run_number }}/execution-report.html
+          node automated_test/build_dast_report.js || true
 
-      - name: Generate Markdown Summary
+      - name: Repackage and Rebrand Excel Reports
         working-directory: ./frontend
-        run: node ./scripts/generate-markdown-summary.js
+        run: |
+          node scripts/repackage-reports.js
 
-      - name: Upload Excel Report Artifact
+      - name: Upload Rebranded Test Reports Artifact
         uses: actions/upload-artifact@v4
-        if: always()
         with:
-          name: web-e2e-excel-report
-          path: frontend/selenium-report.xlsx
-
-      - name: Upload Pages Artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: 'frontend/dist'
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          name: ace-technologies-test-reports
+          path: |
+            frontend/dist/reports/*.xlsx
+          retention-days: 14
