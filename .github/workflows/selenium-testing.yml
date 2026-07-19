@@ -16,6 +16,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -32,23 +44,48 @@ jobs:
       - name: Set up Chrome
         uses: browser-actions/setup-chrome@v1
 
-      - name: Install Frontend Dependencies
+      - name: Install Frontend Scripts Dependencies
         working-directory: ./frontend
         run: npm ci || npm install
 
-      - name: Run Selenium Web E2E Tests
+      - name: Install Selenium Suite Dependencies
+        working-directory: ./frontend/selenium_tests
+        run: npm ci || npm install
+
+      - name: Create CI env file
         working-directory: ./frontend
+        env:
+          SUPABASE_URL: "https://mock.supabase.co"
+          SUPABASE_ANON_KEY: "mock-anon-key"
+          PAYMENT_GATEWAY: "mock-gateway"
+          RAZORPAY_KEY_ID: "mock-razorpay-key"
+          GEMINI_API_KEY: "mock-gemini-key"
+          APP_REDIRECT_URL: "ace-technologies://auth-callback"
+        run: node scripts/create-ci-env.js
+
+      - name: Build Flutter Web App
+        working-directory: ./frontend
+        run: flutter build web --release --dart-define-from-file=env.ci.json
+
+      - name: Run Selenium Web E2E Tests
+        working-directory: ./frontend/selenium_tests
         run: |
-          npx mocha tests/e2e/mega_web_1100.test.js --reporter ./scripts/excelReporter.js || true
+          npm run test:all || true
 
       - name: Rebrand Selenium Report
-        working-directory: ./frontend
+        working-directory: ./frontend/selenium_tests
         run: |
-          python scripts/rebrand_excel.py selenium-report.xlsx AceTechnologies_E2E_Report.xlsx
+          latest_report=$(ls -t reports/Ace_Technologies_TestReport_*.xlsx 2>/dev/null | head -n 1)
+          if [ -n "$latest_report" ]; then
+            python ../scripts/rebrand_excel.py "$latest_report" AceTechnologies_E2E_Report.xlsx
+          else
+            echo "Error: No Selenium test report found!"
+            exit 1
+          fi
 
       - name: Upload E2E Report
         uses: actions/upload-artifact@v4
         with:
           name: AceTechnologies_E2E_Report
-          path: frontend/AceTechnologies_E2E_Report.xlsx
+          path: frontend/selenium_tests/AceTechnologies_E2E_Report.xlsx
           retention-days: 14
