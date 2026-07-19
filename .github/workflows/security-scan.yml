@@ -63,3 +63,12 @@ jobs:
           else
             echo "Security Gate Passed: 0 Critical vulnerabilities."
           fi
+
+      - name: Upload Excel Security Findings Artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-excel-reports
+          path: |
+            frontend/web-security-findings.xlsx
+            backend/backend-findings.xlsx

@@ -76,6 +76,13 @@ jobs:
         working-directory: ./frontend
         run: node ./scripts/generate-markdown-summary.js
 
+      - name: Upload Excel Report Artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: web-e2e-excel-report
+          path: frontend/selenium-report.xlsx
+
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
