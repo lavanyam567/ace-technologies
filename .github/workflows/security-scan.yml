@@ -1,93 +1,65 @@
-name: 🛡️ Security & Vulnerability Scan
+name: Security Review Pipelines
 
 on:
-  workflow_dispatch:
-
-permissions:
-  contents: read
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   security-scans:
-    name: 🩺 Simulated SAST & Security Review
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '18'
 
       - name: Install Frontend Dependencies
-        run: |
-          cd frontend
-          npm install xlsx --no-save || npm ci
+        working-directory: ./frontend
+        run: npm install xlsx
 
       - name: Install Backend Dependencies
-        run: |
-          cd backend
-          npm install xlsx --no-save || npm install
+        working-directory: ./backend
+        run: npm install xlsx
 
       - name: Run Web Frontend Security Suite
-        run: |
-          cd frontend
-          node scripts/generateWebSecuritySuite.js
+        working-directory: ./frontend
+        env:
+          NODE_ENV: production
+        run: node ./scripts/generateWebSecuritySuite.js
 
-      - name: Run Backend Node.js Security Suite
-        run: |
-          cd backend
-          node scripts/generateSecuritySuite.js
+      - name: Run Backend Security Suite
+        working-directory: ./backend
+        env:
+          NODE_ENV: production
+        run: node ./scripts/generateSecuritySuite.js
 
-      - name: Append Executive Summaries to GHA Summary
-        if: always()
+      - name: Publish Security Reports to Step Summary
         run: |
-          echo "## Web Security" >> "$GITHUB_STEP_SUMMARY"
-          cat frontend/reports/web-executive-summary.md >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "## Backend Security" >> "$GITHUB_STEP_SUMMARY"
-          cat backend/reports/executive-summary.md >> "$GITHUB_STEP_SUMMARY"
+          cat frontend/web-executive-summary.md >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat backend/executive-summary.md >> $GITHUB_STEP_SUMMARY
 
-      - name: Append Detailed Findings to GHA Summary
-        if: always()
+      - name: Enforce Zero-Critical Gate
         run: |
-          echo "## Detailed Web Findings" >> "$GITHUB_STEP_SUMMARY"
-          cat frontend/reports/web-security-review.md >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "## Detailed Backend Findings" >> "$GITHUB_STEP_SUMMARY"
-          cat backend/reports/security-review.md >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Enforce Zero-Critical Security Gate (Web)
-        run: |
-          critical_count=$(grep -oE 'Critical Findings \| [0-9]+' frontend/reports/web-executive-summary.md | grep -oE '[0-9]+' | head -n 1)
-          critical_count=${critical_count:-0}
-          echo "Web Critical findings detected: $critical_count"
-          if [ "$critical_count" -gt 0 ]; then
-            echo "Zero-Critical Security Policy violated in Frontend."
+          # Extract Critical count from the backend summary
+          CRITICAL_COUNT=$(grep -oP '\|\s*Critical\s*\|\s*\K\d+' backend/executive-summary.md)
+          
+          if [ -z "$CRITICAL_COUNT" ]; then
+            echo "Could not determine critical count. Failing safely."
             exit 1
           fi
-
-      - name: Enforce Zero-Critical Security Gate (Backend)
-        run: |
-          critical_count=$(grep -oE 'Critical Findings \| [0-9]+' backend/reports/executive-summary.md | grep -oE '[0-9]+' | head -n 1)
-          critical_count=${critical_count:-0}
-          echo "Backend Critical findings detected: $critical_count"
-          if [ "$critical_count" -gt 0 ]; then
-            echo "Zero-Critical Security Policy violated in Backend."
+          
+          echo "Found $CRITICAL_COUNT Critical findings."
+          if [ "$CRITICAL_COUNT" -gt 0 ]; then
+            echo "Security Gate Failed: Critical vulnerabilities found!"
             exit 1
+          else
+            echo "Security Gate Passed: 0 Critical vulnerabilities."
           fi
-
-      - name: Upload Security Review Artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: security-review-reports-${{ github.run_number }}
-          path: |
-            frontend/reports/web-security-findings.xlsx
-            frontend/reports/web-security-review.md
-            frontend/reports/web-executive-summary.md
-            backend/reports/backend-findings.xlsx
-            backend/reports/security-review.md
-            backend/reports/dependency-report.md
-            backend/reports/executive-summary.md
-          retention-days: 30

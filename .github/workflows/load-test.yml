@@ -1,0 +1,45 @@
+name: API Load Testing (k6)
+
+on:
+  push:
+    paths:
+      - 'backend/**'
+  pull_request:
+    paths:
+      - 'backend/**'
+
+jobs:
+  load-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Setup k6
+        uses: grafana/setup-k6-action@v1
+
+      - name: Start Backend Server (Mock)
+        working-directory: ./backend
+        run: |
+          # If we had a real backend, we'd start it here.
+          # For demonstration, we'll start a simple python server to return 200s
+          mkdir -p api
+          echo '{"status": "ok"}' > api/status
+          python3 -m http.server 3000 &
+          sleep 3
+          echo "API_BASE_URL=http://127.0.0.1:3000/api/status" >> $GITHUB_ENV
+
+      - name: Run k6 Load Test
+        working-directory: ./frontend
+        run: |
+          k6 run --summary-export=summary.json k6_tests/run-baseline-load.js
+
+      - name: Parse and Publish Summary
+        working-directory: ./frontend
+        run: |
+          node k6_tests/parseK6Summary.js

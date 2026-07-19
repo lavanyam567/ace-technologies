@@ -1,62 +1,25 @@
-'use strict';
+import http from 'k6/http';
+import { check, sleep } from 'k6';
 
-const fs = require('fs');
-const path = require('path');
-const { spawnSync } = require('child_process');
-
-function loadEnvFile(envPath) {
-  if (!envPath || !fs.existsSync(envPath)) {
-    return {};
-  }
-  return JSON.parse(fs.readFileSync(envPath, 'utf8'));
-}
-
-const projectRoot = path.resolve(__dirname, '..');
-const resultsDir = path.resolve(__dirname, 'results');
-fs.mkdirSync(resultsDir, { recursive: true });
-
-const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-const summaryPath = path.join(resultsDir, `baseline_summary_${timestamp}.json`);
-const envFilePath = process.env.K6_ENV_FILE
-  ? path.resolve(projectRoot, process.env.K6_ENV_FILE)
-  : path.resolve(projectRoot, 'env.production.json');
-const envFromFile = loadEnvFile(envFilePath);
-
-const k6Binary = process.env.K6_BIN ||
-  (process.platform === 'win32'
-    ? path.resolve(__dirname, 'k6_bin', 'k6-v2.0.0-windows-amd64', 'k6.exe')
-    : 'k6');
-
-const env = {
-  ...process.env,
-  ...envFromFile,
-  BASELINE_VUS: process.env.BASELINE_VUS || '100',
-  BASELINE_DURATION: process.env.BASELINE_DURATION || '1m',
-  K6_SLEEP_SECONDS: process.env.K6_SLEEP_SECONDS || '0.2',
+export const options = {
+    vus: 100,
+    duration: '1m',
+    thresholds: {
+        'http_req_failed': ['rate<0.05'], // Request failures under 5%
+        'http_req_duration': ['p(95)<1500'] // 95% of requests must complete below 1.5s
+    },
 };
 
-const runArgs = [
-  'run',
-  '--summary-export',
-  summaryPath,
-  path.resolve(__dirname, 'baseline-load.js'),
-];
+export default function () {
+    // Target the backend API URL (via environment variables or fallback)
+    const url = __ENV.API_BASE_URL || 'http://127.0.0.1:3000/api/status';
 
-const run = spawnSync(k6Binary, runArgs, {
-  cwd: projectRoot,
-  env,
-  stdio: 'inherit',
-});
-
-const report = spawnSync(process.execPath, [path.resolve(__dirname, 'generate-xlsx-report.js'), summaryPath], {
-  cwd: projectRoot,
-  stdio: 'inherit',
-});
-
-if (report.status !== 0) {
-  process.exit(report.status || 1);
-}
-
-if (run.status !== 0) {
-  process.exit(run.status || 1);
+    const res = http.get(url);
+    
+    check(res, {
+        'status is 200': (r) => r.status === 200,
+    });
+    
+    // Slight sleep to simulate real user wait time between requests
+    sleep(1);
 }

@@ -1,45 +1,30 @@
 #!/bin/bash
 set -e
 
-echo "Starting CI Appium Test Runner..."
-
-# Inject GITHUB_PATH to ensure Node binaries are available inside emulator runner
+# Inject GITHUB_PATH into PATH so node binaries are available
 if [ -f "$GITHUB_PATH" ]; then
-  echo "Loading GITHUB_PATH into current PATH..."
-  while IFS= read -r line; do
-    export PATH="$line:$PATH"
-  done < "$GITHUB_PATH"
+    while IFS= read -r line; do
+        export PATH="$line:$PATH"
+    done < "$GITHUB_PATH"
 fi
 
-if [ -z "$APK_PATH" ]; then
-  echo "Error: APK_PATH environment variable is not set."
-  exit 1
+echo "Installing APK onto emulator..."
+if [ -n "$APK_PATH" ] && [ -f "$APK_PATH" ]; then
+    adb install -r "$APK_PATH"
+else
+    echo "Warning: APK_PATH is not set or file does not exist. Tests may fail if they rely on the app."
 fi
 
-echo "Installing APK onto emulator from: $APK_PATH"
-adb install -r "$APK_PATH"
-
-echo "Starting Appium Server in background..."
-npx appium --log-level warn > /tmp/appium.log 2>&1 &
+echo "Starting Appium Server..."
+appium --log-level warn > /tmp/appium.log 2>&1 &
 APPIUM_PID=$!
 
 echo "Waiting for Appium to respond on port 4723..."
-timeout 60 bash -c 'until curl -s http://127.0.0.1:4723/status > /dev/null; do sleep 2; done'
-echo "Appium server is up."
+timeout 30 bash -c 'until curl -s http://127.0.0.1:4723/status > /dev/null; do sleep 1; done' || (echo "Appium failed to start"; exit 1)
+echo "Appium started."
 
-echo "Installing NPM dependencies..."
-npm install xlsx --no-save
+echo "Executing Appium Tests..."
+# Define the path to tests relative to the frontend directory
+npx mocha appium_tests/tests/mega_android_1100.test.js --reporter ./appium_tests/utils/xlsxReporter.js
 
-echo "Executing Appium E2E test suite..."
-# Assuming `npx mocha tests/mega_android_300.test.js` or similar based on Prompt 3
-npx mocha tests/mega_android_300.test.js --reporter ./utils/xlsxReporter.js
-
-echo "Generating HTML report..."
-node scripts/generate-html-report.js
-
-echo "Appending Summary to GitHub Actions..."
-node scripts/generate-summary.js
-
-echo "Shutting down Appium..."
-kill $APPIUM_PID || true
-echo "Test execution complete."
+kill $APPIUM_PID

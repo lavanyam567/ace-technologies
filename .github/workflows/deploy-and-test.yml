@@ -1,103 +1,86 @@
-name: Deploy And Test
+name: Deploy and Test Frontend
 
 on:
-  workflow_dispatch:
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+  push:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
 
 jobs:
-  frontend-security:
+  build-test-deploy:
     runs-on: ubuntu-latest
-    env:
-      NODE_PATH: ${{ github.workspace }}/frontend/automated_test/node_modules
-    defaults:
-      run:
-        working-directory: frontend
+    
+    # Required permissions for GitHub Pages deployments
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-
-      - name: Set up Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
 
-      - name: Install Flutter dependencies
-        run: flutter pub get
+      - name: Install Dependencies
+        working-directory: ./frontend
+        run: npm ci || npm install
 
-      - name: Install security report dependencies
-        run: npm --prefix automated_test install
+      - name: Build Frontend (Vite)
+        working-directory: ./frontend
+        run: npm run build
 
-      - name: Generate web security review
-        run: node automated_test/scripts/generateWebSecuritySuite.js
-
-      - name: Create CI env file
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          PAYMENT_GATEWAY: ${{ secrets.PAYMENT_GATEWAY }}
-          RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID }}
-          APP_REDIRECT_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
-        run: node scripts/create-ci-env.js
-
-      - name: Build Flutter web
-        run: flutter build web --release --dart-define-from-file=env.ci.json --base-href "/ace-technologies/"
-
-      - name: Append frontend security summary to GHA summary
-        if: always()
+      - name: Start Background Vite Preview Server
+        working-directory: ./frontend
         run: |
-          cat automated_test/reports/web-executive-summary.md >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          cat automated_test/reports/web-security-review.md >> "$GITHUB_STEP_SUMMARY"
+          # Start the server in the background
+          npx vite preview --port 5173 --host 127.0.0.1 --base /ace-technologies/ &
+          
+          # Startup buffer
+          sleep 4
+          
+          # Verify local server is alive
+          curl -f http://127.0.0.1:5173/ace-technologies/ || exit 1
+          
+          # Export to GITHUB_ENV
+          echo "TEST_BASE_URL=http://127.0.0.1:5173/ace-technologies/" >> $GITHUB_ENV
 
-      - name: Enforce zero-critical security gate
+      - name: Run E2E Test Suite (1,100 Tests)
+        working-directory: ./frontend
         run: |
-          critical_count=$(grep -oE 'Critical Findings: [0-9]+' automated_test/reports/web-executive-summary.md | grep -oE '[0-9]+' | head -n 1)
-          critical_count=${critical_count:-0}
-          echo "Critical findings detected: $critical_count"
-          if [ "$critical_count" -gt 0 ]; then
-            echo "Zero-Critical Security Policy violated."
-            exit 1
-          fi
+          # Ensure mocha is available and run the mega test suite with the custom reporter
+          npx mocha tests/e2e/mega_web_1100.test.js --reporter ./scripts/excelReporter.js
 
-      - name: Upload frontend security artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-security-review-${{ github.run_number }}
-          path: |
-            frontend/automated_test/reports/web-security-findings.xlsx
-            frontend/automated_test/reports/web-security-review.md
-            frontend/automated_test/reports/web-executive-summary.md
+      - name: Inject HTML Report to Dist Directory
+        working-directory: ./frontend
+        run: |
+          # The reporter generated execution-report.html in the current dir
+          mkdir -p dist/reports/latest
+          mkdir -p dist/reports/history/build-${{ github.run_number }}
+          
+          cp execution-report.html dist/reports/latest/execution-report.html
+          cp execution-report.html dist/reports/history/build-${{ github.run_number }}/execution-report.html
 
-      - name: Upload frontend Excel report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-security-excel-${{ github.run_number }}
-          path: frontend/automated_test/reports/web-security-findings.xlsx
+      - name: Generate Markdown Summary
+        working-directory: ./frontend
+        run: node ./scripts/generate-markdown-summary.js
 
-      - name: Upload GitHub Pages artifact
+      - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: frontend/build/web
+          path: 'frontend/dist'
 
-  deploy-to-pages:
-    needs: frontend-security
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

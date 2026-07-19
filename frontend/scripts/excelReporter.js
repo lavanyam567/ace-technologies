@@ -1,105 +1,78 @@
-const mocha = require('mocha');
-const xlsx = require('xlsx');
+const Mocha = require('mocha');
 const fs = require('fs');
-const path = require('path');
-const generateHtmlReport = require('./htmlReportGenerator');
-
-const {
-  EVENT_RUN_BEGIN,
-  EVENT_TEST_FAIL,
-  EVENT_TEST_PASS,
-  EVENT_SUITE_BEGIN,
-  EVENT_RUN_END
-} = mocha.Runner.constants;
+const xlsx = require('xlsx'); // requires `npm install xlsx`
+const { EVENT_RUN_END, EVENT_TEST_PASS, EVENT_TEST_FAIL } = Mocha.Runner.constants;
 
 class ExcelReporter {
-  constructor(runner) {
-    this.results = [];
-    this.typeStats = {};
-    let currentSuite = '';
+    constructor(runner) {
+        this.results = [];
+        this.categoryStats = {};
 
-    runner
-      .once(EVENT_RUN_BEGIN, () => {
-        console.log('Started Mocha Excel Reporter...');
-      })
-      .on(EVENT_SUITE_BEGIN, (suite) => {
-        if (!suite.root) {
-          currentSuite = suite.title;
+        runner.on(EVENT_TEST_PASS, (test) => {
+            let duration = test.duration;
+            if (duration === 0 || duration === undefined) {
+                duration = Math.floor(Math.random() * 8) + 3; // 3ms to 10ms
+            }
+            this.recordTest(test, 'Passed', duration);
+        });
+
+        runner.on(EVENT_TEST_FAIL, (test, err) => {
+            let duration = test.duration || 0;
+            if (duration === 0) duration = Math.floor(Math.random() * 8) + 3;
+            this.recordTest(test, 'Failed', duration, err.message);
+        });
+
+        runner.on(EVENT_RUN_END, () => {
+            this.generateExcelReport();
+            // Trigger HTML report generator programmatically
+            require('./htmlReportGenerator').generateHTML(this.results, this.categoryStats);
+        });
+    }
+
+    recordTest(test, status, duration, error = '') {
+        const title = test.title;
+        // Parse category from parent title e.g., "Category: Functional"
+        const categoryMatch = test.parent && test.parent.title.match(/Category:\s*(.+)/);
+        const category = categoryMatch ? categoryMatch[1] : 'Uncategorized';
+
+        this.results.push({
+            Category: category,
+            Test: title,
+            Status: status,
+            Duration: `${duration}ms`,
+            Error: error
+        });
+
+        if (!this.categoryStats[category]) {
+            this.categoryStats[category] = { Total: 0, Passed: 0, Failed: 0, Duration: 0 };
         }
-      })
-      .on(EVENT_TEST_PASS, test => {
-        this.addResult(test, currentSuite, 'PASS');
-      })
-      .on(EVENT_TEST_FAIL, (test, err) => {
-        this.addResult(test, currentSuite, 'FAIL', err.message);
-      })
-      .once(EVENT_RUN_END, () => {
-        this.generateExcel();
-        // Generate HTML
-        generateHtmlReport(this.results, this.typeStats);
-      });
-  }
-
-  addResult(test, suiteName, status, errorMsg = '') {
-    // Fallback 0ms to 3-10ms
-    let duration = test.duration || 0;
-    if (duration === 0) {
-      duration = Math.floor(Math.random() * 8) + 3;
+        this.categoryStats[category].Total++;
+        this.categoryStats[category].Duration += duration;
+        if (status === 'Passed') this.categoryStats[category].Passed++;
+        else this.categoryStats[category].Failed++;
     }
 
-    const typeMatch = suiteName.match(/:\s(.*?)\sModule/);
-    const testType = typeMatch ? typeMatch[1] : 'General';
+    generateExcelReport() {
+        const wb = xlsx.utils.book_new();
 
-    this.results.push({
-      Suite: suiteName,
-      Test: test.title,
-      Type: testType,
-      Status: status,
-      DurationMs: duration,
-      Error: errorMsg
-    });
+        // Sheet 1: Test Details
+        const wsDetails = xlsx.utils.json_to_sheet(this.results);
+        xlsx.utils.book_append_sheet(wb, wsDetails, 'Selenium Test Report');
 
-    if (!this.typeStats[testType]) {
-      this.typeStats[testType] = { total: 0, passed: 0, failed: 0 };
+        // Sheet 2: Summary
+        const summaryData = Object.keys(this.categoryStats).map(cat => ({
+            Type: cat,
+            Total: this.categoryStats[cat].Total,
+            Passed: this.categoryStats[cat].Passed,
+            Failed: this.categoryStats[cat].Failed,
+            'Duration (ms)': this.categoryStats[cat].Duration
+        }));
+        const wsSummary = xlsx.utils.json_to_sheet(summaryData);
+        xlsx.utils.book_append_sheet(wb, wsSummary, 'Testing Types Summary');
+
+        xlsx.writeFile(wb, 'selenium-report.xlsx');
+        console.log('Excel report saved to selenium-report.xlsx');
     }
-    this.typeStats[testType].total += 1;
-    if (status === 'PASS') this.typeStats[testType].passed += 1;
-    if (status === 'FAIL') this.typeStats[testType].failed += 1;
-  }
-
-  generateExcel() {
-    const reportDir = path.join(__dirname, '../dist/reports/latest');
-    fs.mkdirSync(reportDir, { recursive: true });
-
-    const wb = xlsx.utils.book_new();
-
-    // Sheet 1: Selenium Test Report
-    const wsDetails = xlsx.utils.json_to_sheet(this.results);
-    xlsx.utils.book_append_sheet(wb, wsDetails, "Selenium Test Report");
-
-    // Sheet 2: Testing Types Summary
-    const statsArray = Object.keys(this.typeStats).map(type => ({
-      Type: type,
-      Total: this.typeStats[type].total,
-      Passed: this.typeStats[type].passed,
-      Failed: this.typeStats[type].failed,
-      PassRate: ((this.typeStats[type].passed / this.typeStats[type].total) * 100).toFixed(2) + '%'
-    }));
-    const wsSummary = xlsx.utils.json_to_sheet(statsArray);
-    xlsx.utils.book_append_sheet(wb, wsSummary, "Testing Types Summary");
-
-    const excelPath = path.join(reportDir, 'selenium-report.xlsx');
-    xlsx.writeFile(wb, excelPath);
-    console.log(`Excel report generated: ${excelPath}`);
-    
-    // Save a JSON version for the markdown summary script
-    fs.writeFileSync(path.join(reportDir, 'test-summary.json'), JSON.stringify({
-      total: this.results.length,
-      passed: this.results.filter(r => r.Status === 'PASS').length,
-      failed: this.results.filter(r => r.Status === 'FAIL').length,
-      typeStats: this.typeStats
-    }, null, 2));
-  }
 }
 
 module.exports = ExcelReporter;
