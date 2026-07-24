@@ -1228,5 +1228,64 @@ class SupabaseService {
       // Sentiment analysis is non-critical — never crash the app.
     }
   }
+
+  // ──────────────────────────────────────────────────────────
+  // Search-Intent Recommendations
+  // ──────────────────────────────────────────────────────────
+
+  /// Silently records a submitted search query for search-intent
+  /// recommendations. Fire-and-forget — no-op when signed out and never
+  /// throws so analytics can never break the UI.
+  Future<void> logSearch(String query, int resultCount) async {
+    final user = currentUser;
+    if (user == null) return; // Only log for signed-in users
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) return;
+    try {
+      await _client.from('search_history').insert({
+        'user_id': user.id,
+        'query': trimmed,
+        'result_count': resultCount,
+      });
+    } catch (_) {
+      // Fire-and-forget: never crash the UI for logging failures.
+    }
+  }
+
+  /// Returns product recommendations based on the user's recent searches.
+  Future<List<Product>> fetchSearchBasedRecommendations() async {
+    final user = currentUser;
+    if (user == null) return [];
+
+    try {
+      final rows = await _client.rpc(
+        'get_search_based_recommendations',
+        params: {'p_user_id': user.id},
+      );
+      return (rows as List<dynamic>)
+          .map<Product>((row) => Product.fromSupabase(row as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Returns the user's most recent search query, or null if none / signed out.
+  Future<String?> fetchMostRecentSearchQuery() async {
+    final user = currentUser;
+    if (user == null) return null;
+    try {
+      final row = await _client
+          .from('search_history')
+          .select('query')
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+      return row?['query'] as String?;
+    } catch (_) {
+      return null;
+    }
+  }
 }
 

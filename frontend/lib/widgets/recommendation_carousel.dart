@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 
+import 'cached_image.dart';
 import '../models/product_model.dart';
 import '../core/theme/app_theme.dart';
 import '../features/products/providers/recommendation_provider.dart';
@@ -87,7 +87,7 @@ class RecommendationCarousel extends ConsumerWidget {
 
           // ── Horizontal scroll list ───────────────────────────────
           SizedBox(
-            height: 220,
+            height: 234,
             child: isLoading
                 ? _buildShimmer()
                 : ListView.builder(
@@ -116,12 +116,12 @@ class RecommendationCarousel extends ConsumerWidget {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
         itemCount: 4,
-        itemBuilder: (_, __) => Container(
+        itemBuilder: (_, _) => Container(
           width: 148,
           margin: const EdgeInsets.only(right: 12),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
+            color: AppTheme.cardColor,
+            borderRadius: BorderRadius.circular(16),
           ),
         ),
       ),
@@ -151,13 +151,56 @@ class PersonalisedRecommendationCarousel extends ConsumerWidget {
         products: const [],
         isLoading: true,
       ),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
       data: (products) => RecommendationCarousel(
         title: 'Recommended for You',
         subtitle: 'Personalised picks for you',
         icon: Icons.auto_awesome,
         products: products,
       ),
+    );
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Search-Intent Carousel — pulls from searchBasedRecommendationsProvider
+// Hidden entirely when there are no search-based recommendations.
+// ────────────────────────────────────────────────────────────────────────────
+
+class SearchBasedRecommendationCarousel extends ConsumerWidget {
+  const SearchBasedRecommendationCarousel({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final auth = ref.watch(authProvider);
+    if (!auth.isAuthenticated) return const SizedBox.shrink();
+
+    final recsAsync = ref.watch(searchBasedRecommendationsProvider);
+    final recentQuery = ref.watch(mostRecentSearchQueryProvider).valueOrNull;
+
+    final subtitle = (recentQuery != null && recentQuery.trim().isNotEmpty)
+        ? 'Based on "$recentQuery"'
+        : 'Based on your recent searches';
+
+    return recsAsync.when(
+      loading: () => RecommendationCarousel(
+        title: 'Because You Searched',
+        subtitle: subtitle,
+        icon: Icons.manage_search,
+        products: const [],
+        isLoading: true,
+      ),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (products) {
+        // Hide entirely when empty.
+        if (products.isEmpty) return const SizedBox.shrink();
+        return RecommendationCarousel(
+          title: 'Because You Searched',
+          subtitle: subtitle,
+          icon: Icons.manage_search,
+          products: products,
+        );
+      },
     );
   }
 }
@@ -183,7 +226,7 @@ class SimilarProductsCarousel extends ConsumerWidget {
         products: const [],
         isLoading: true,
       ),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
       data: (products) => RecommendationCarousel(
         title: 'Similar Products',
         subtitle: 'From the same category',
@@ -227,11 +270,11 @@ class _RecommendationCardState extends State<_RecommendationCard> {
               : Matrix4.identity(),
           decoration: BoxDecoration(
             color: AppTheme.cardColor,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: _hovered ? 0.12 : 0.06),
-                blurRadius: _hovered ? 16 : 8,
+                color: Colors.black.withValues(alpha: _hovered ? 0.08 : 0.04),
+                blurRadius: _hovered ? 18 : 10,
                 offset: const Offset(0, 4),
               ),
             ],
@@ -239,78 +282,146 @@ class _RecommendationCardState extends State<_RecommendationCard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Product Image
-              ClipRRect(
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(14)),
-                child: CachedNetworkImage(
-                  imageUrl: widget.product.safeImage,
-                  width: 148,
-                  height: 110,
-                  fit: BoxFit.cover,
-                  placeholder: (_, __) => Container(
-                    color: Colors.grey.shade100,
-                    child: const Center(
-                      child: Icon(Icons.image_outlined, color: Colors.grey),
+              // Product Image (AceImage renders a native <img> on web,
+              // which loads cross-origin images that CachedNetworkImage can't).
+              Stack(
+                children: [
+                  Container(
+                    width: 148,
+                    height: 110,
+                    color: Colors.grey.shade50,
+                    child: AceImage(
+                      url: widget.product.safeImage,
+                      width: 148,
+                      height: 110,
+                      fit: BoxFit.cover,
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(16)),
                     ),
                   ),
-                  errorWidget: (_, __, ___) => Container(
-                    color: Colors.grey.shade100,
-                    child: const Icon(Icons.broken_image_outlined,
-                        color: Colors.grey),
-                  ),
-                ),
-              ),
-              // Discount badge
-              if (widget.product.hasDiscount)
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.red.shade50,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      '${widget.product.discount}% OFF',
-                      style: TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.red.shade600,
+                  // Discount badge (overlaid, top-left)
+                  if (widget.product.hasDiscount)
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 7, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppTheme.errorColor,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '${widget.product.discount}% OFF',
+                          style: const TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                )
-              else
-                const SizedBox(height: 8),
-              // Product name
+                  // Rating pill (overlaid, top-right)
+                  if (widget.product.rating > 0)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.6),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.star_rounded,
+                                size: 11, color: Color(0xFFFFC107)),
+                            const SizedBox(width: 2),
+                            Text(
+                              widget.product.rating.toStringAsFixed(1),
+                              style: const TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              // Brand + name
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Text(
-                  widget.product.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimary,
-                    height: 1.3,
-                  ),
+                padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (widget.product.brand.isNotEmpty)
+                      Text(
+                        widget.product.brand.toUpperCase(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.4,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                    const SizedBox(height: 2),
+                    Text(
+                      widget.product.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const Spacer(),
-              // Price
+              // Price row (current + strikethrough original)
               Padding(
-                padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-                child: Text(
-                  widget.product.formattedPrice,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.primaryColor,
-                  ),
+                padding: const EdgeInsets.fromLTRB(8, 0, 8, 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        widget.product.formattedPrice,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.primaryColor,
+                        ),
+                      ),
+                    ),
+                    if (widget.product.hasDiscount &&
+                        widget.product.formattedOriginalPrice.isNotEmpty) ...[
+                      const SizedBox(width: 5),
+                      Flexible(
+                        child: Text(
+                          widget.product.formattedOriginalPrice,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey.shade400,
+                            decoration: TextDecoration.lineThrough,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ],

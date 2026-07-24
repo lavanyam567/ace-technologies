@@ -36,12 +36,12 @@ class ProductCard extends StatelessWidget {
           onTap: onTap,
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppTheme.cardColor,
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 10,
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
               ],

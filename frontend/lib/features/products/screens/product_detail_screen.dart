@@ -55,11 +55,14 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      body: CustomScrollView(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1100),
+          child: CustomScrollView(
         slivers: [
           // App Bar
           SliverAppBar(
-            backgroundColor: Colors.white,
+            backgroundColor: AppTheme.cardColor,
             pinned: true,
             expandedHeight: 350,
             leading: IconButton(
@@ -119,7 +122,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       '/product/${product.id}/gallery?index=$_selectedImageIndex',
                     ),
                     child: Container(
-                      color: Colors.white,
+                      color: AppTheme.cardColor,
                       child: AceImage(
                         url: images[_selectedImageIndex],
                         width: double.infinity,
@@ -436,6 +439,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
 
           const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
+          ),
+        ),
       ),
 
       // Bottom bar

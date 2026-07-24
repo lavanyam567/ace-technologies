@@ -30,6 +30,37 @@ final recommendationsProvider =
 );
 
 // ──────────────────────────────────────────────────────────────
+// Search-intent recommendations ("Because You Searched")
+// ──────────────────────────────────────────────────────────────
+
+class SearchBasedRecommendationsNotifier extends AsyncNotifier<List<Product>> {
+  @override
+  Future<List<Product>> build() async {
+    // Re-fetch whenever auth state changes
+    ref.watch(authProvider);
+    return SupabaseService.instance.fetchSearchBasedRecommendations();
+  }
+
+  Future<void> refresh() async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(
+      () => SupabaseService.instance.fetchSearchBasedRecommendations(),
+    );
+  }
+}
+
+final searchBasedRecommendationsProvider =
+    AsyncNotifierProvider<SearchBasedRecommendationsNotifier, List<Product>>(
+  SearchBasedRecommendationsNotifier.new,
+);
+
+// The user's most recent search query — powers the carousel subtitle.
+final mostRecentSearchQueryProvider = FutureProvider<String?>((ref) async {
+  ref.watch(authProvider);
+  return SupabaseService.instance.fetchMostRecentSearchQuery();
+});
+
+// ──────────────────────────────────────────────────────────────
 // Similar products (content-based, by category)
 // ──────────────────────────────────────────────────────────────
 

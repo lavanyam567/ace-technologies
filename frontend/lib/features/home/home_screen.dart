@@ -48,13 +48,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           await ref.read(productsProvider.notifier).loadProducts();
           await ref.read(servicesProvider.notifier).loadServices();
         },
-        child: CustomScrollView(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1200),
+            child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             // App Bar
             SliverAppBar(
               floating: true,
-              backgroundColor: Colors.white,
+              backgroundColor: AppTheme.cardColor,
               elevation: 0,
               title: Row(
                 children: [
@@ -107,6 +110,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   // ✨ AI Personalised Recommendations (logged-in users only)
                   const PersonalisedRecommendationCarousel(),
 
+                  // 🔎 Search-intent recommendations (hidden when empty)
+                  const SearchBasedRecommendationCarousel(),
+
                   // Browse Categories (Products)
                   _buildCategories(),
 
@@ -125,6 +131,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
           ],
+            ),
+          ),
         ),
       ),
     );
@@ -223,7 +231,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         margin: const EdgeInsets.symmetric(horizontal: 4),
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppTheme.cardColor,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
@@ -270,7 +278,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   onPressed: _submitSearch,
                 ),
           filled: true,
-          fillColor: Colors.white,
+          fillColor: AppTheme.cardColor,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,
@@ -609,14 +617,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           LayoutBuilder(
             builder: (context, constraints) {
               final isWide = constraints.maxWidth >= 900;
+              final crossAxisCount = constraints.maxWidth >= 1200
+                  ? 4
+                  : isWide
+                      ? 3
+                      : 2;
               return GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: isWide ? 2 : 2,
+                  crossAxisCount: crossAxisCount,
                   mainAxisExtent: isWide ? 335 : null,
-                  childAspectRatio: isWide ? 1 : 0.5,
+                  childAspectRatio: isWide ? 1 : 0.52,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
                 ),
