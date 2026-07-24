@@ -49,6 +49,7 @@ class AceTechnologiesApp extends ConsumerWidget {
     ref.watch(authProvider);
 
     final themeMode = ref.watch(themeProvider);
+    AppTheme.updateThemeMode(themeMode);
     final router = ref.watch(routerProvider);
 
     return ResponsiveObserver(

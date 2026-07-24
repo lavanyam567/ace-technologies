@@ -126,41 +126,56 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
                     ),
                   )
                 : services.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.search_off,
-                          size: 64,
-                          color: Colors.grey.shade400,
+                ? RefreshIndicator(
+                    onRefresh: () async {
+                      await ref.read(servicesProvider.notifier).loadServices();
+                    },
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: Container(
+                        height: 400,
+                        alignment: Alignment.center,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.search_off,
+                              size: 64,
+                              color: Colors.grey.shade400,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No services found',
+                              style: TextStyle(
+                                fontSize: 18,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No services found',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: services.length,
-                    itemBuilder: (context, index) {
-                      final service = services[index];
-                      return ServiceCard(
-                        service: service,
-                        onBookNow: () {
-                          _showBookingDialog(service);
-                        },
-                        onTap: () {
-                          context.go('/service/${service.id}');
-                        },
-                      );
+                : RefreshIndicator(
+                    onRefresh: () async {
+                      await ref.read(servicesProvider.notifier).loadServices();
                     },
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: services.length,
+                      itemBuilder: (context, index) {
+                        final service = services[index];
+                        return ServiceCard(
+                          service: service,
+                          onBookNow: () {
+                            _showBookingDialog(service);
+                          },
+                          onTap: () {
+                            context.push('/service/${service.id}');
+                          },
+                        );
+                      },
+                    ),
                   ),
           ),
         ],

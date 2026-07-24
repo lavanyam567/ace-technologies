@@ -103,6 +103,14 @@ class ReviewsNotifier extends StateNotifier<ReviewsState> {
         comment: comment,
       );
       state = state.copyWith(reviews: [review, ...state.reviews]);
+
+      // Fire-and-forget: trigger NLP sentiment analysis in the background.
+      // The UI is not blocked — the Edge Function runs asynchronously.
+      SupabaseService.instance.analyzeSentiment(
+        reviewId: review.id,
+        productId: productId,
+        text: comment,
+      );
     } catch (error) {
       state = state.copyWith(error: error.toString());
       rethrow;
@@ -111,6 +119,7 @@ class ReviewsNotifier extends StateNotifier<ReviewsState> {
     }
   }
 }
+
 
 final reviewsProvider =
     StateNotifierProvider.family<ReviewsNotifier, ReviewsState, String>((

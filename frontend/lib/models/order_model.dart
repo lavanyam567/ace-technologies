@@ -143,7 +143,9 @@ class Order {
           .whereType<Map<String, dynamic>>()
           .map(OrderItem.fromSupabase)
           .toList(),
-      shippingAddress: null,
+      shippingAddress: json['addresses'] != null
+          ? Address.fromSupabase(json['addresses'] as Map<String, dynamic>)
+          : null,
       status: orderStatusFromSupabase(json['status'] as String?),
       orderDate:
           DateTime.tryParse(json['created_at'] as String? ?? '') ??

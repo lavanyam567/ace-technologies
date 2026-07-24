@@ -119,6 +119,20 @@ class AuthProvider extends StateNotifier<AuthState> {
     }
   }
 
+  Future<bool> changePassword(String newPassword) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      await _client.auth.updateUser(
+        UserAttributes(password: newPassword),
+      );
+      state = state.copyWith(isLoading: false);
+      return true;
+    } catch (error) {
+      state = state.copyWith(isLoading: false, error: error.toString());
+      return false;
+    }
+  }
+
   Future<bool> updateProfile({
     required String name,
     String? phone,
@@ -173,7 +187,7 @@ class AuthState {
   String get email => userEmail ?? '';
   String get phone => userPhone?.isNotEmpty == true ? userPhone! : '';
   String get avatarUrl => profileImageUrl ?? '';
-  bool get isAdmin => role == 'admin';
+  bool get isAdmin => role == 'admin' && email == 'lava052005@gmail.com';
 
   AuthState copyWith({
     bool? isAuthenticated,

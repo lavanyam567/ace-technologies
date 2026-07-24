@@ -1,0 +1,9 @@
+# Root gitignore to prevent committing node dependencies, build outputs, and IDE caches
+node_modules/
+.gradle/
+build/
+dist/
+.idea/caches/
+.idea/workspace.xml
+*.log
+.DS_Store

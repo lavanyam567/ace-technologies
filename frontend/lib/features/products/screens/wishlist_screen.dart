@@ -5,6 +5,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../products/providers/wishlist_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../../widgets/cached_image.dart';
 
 class WishlistScreen extends ConsumerWidget {
   const WishlistScreen({super.key});
@@ -143,14 +144,14 @@ class WishlistScreen extends ConsumerWidget {
             children: [
               // Image
               GestureDetector(
-                onTap: () => context.go('/product/${product.id}'),
+                onTap: () => context.push('/product/${product.id}'),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
                     width: 80,
                     height: 80,
                     color: Colors.grey.shade100,
-                    child: Image.network(product.image, fit: BoxFit.cover),
+                    child: AceImage(url: product.image, fit: BoxFit.cover),
                   ),
                 ),
               ),

@@ -177,22 +177,26 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: _isPlacingOrder || cartItems.isEmpty
-                    ? null
-                    : () => _placeOrder(cartItems, selectedAddress, total),
-                child: Text(
-                  _isPlacingOrder
-                      ? 'Placing Order...'
-                      : 'Place Order - ${CurrencyUtils.formatPrice(total)}',
-                ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              onPressed: _isPlacingOrder || cartItems.isEmpty
+                  ? null
+                  : () => _placeOrder(cartItems, selectedAddress, total),
+              child: Text(
+                _isPlacingOrder
+                    ? 'Placing Order...'
+                    : 'Place Order - ${CurrencyUtils.formatPrice(total)}',
               ),
             ),
-          ],
+          ),
         ),
       ),
     );

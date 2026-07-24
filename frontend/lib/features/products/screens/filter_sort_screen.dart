@@ -27,15 +27,24 @@ class _FilterSortScreenState extends ConsumerState<FilterSortScreen> {
     {'value': 'discount', 'label': 'Best Discount'},
   ];
 
-  final List<String> _categories = [
+  List<String> _categories = [];
+  List<String> _brands = [];
+
+  final List<String> _defaultCategories = [
     'Processors',
-    'Graphics Cards',
-    'Motherboards',
+    'Laptops',
+    'Networking',
+    'Printers',
+    'CCTV Cameras',
+    'Fire Alarms',
+    'Door Access',
     'RAM',
-    'Storage',
-    'Power Supply',
+    'Hard Disk',
+    'Keyboard',
+    'Mouse',
+    'Monitor',
   ];
-  final List<String> _brands = [
+  final List<String> _defaultBrands = [
     'Intel',
     'AMD',
     'NVIDIA',
@@ -43,8 +52,26 @@ class _FilterSortScreenState extends ConsumerState<FilterSortScreen> {
     'MSI',
     'Gigabyte',
     'Corsair',
+    'Dell',
+    'Lenovo',
+    'HP',
+    'Acer',
   ];
   final List<String> _ratings = ['4★ & above', '3★ & above', '2★ & above'];
+
+  @override
+  void initState() {
+    super.initState();
+    final products = ref.read(productsProvider);
+    _categories = products.map((p) => p.category).toSet().toList()..sort();
+    if (_categories.isEmpty) {
+      _categories = _defaultCategories;
+    }
+    _brands = products.map((p) => p.brand).toSet().toList()..sort();
+    if (_brands.isEmpty) {
+      _brands = _defaultBrands;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

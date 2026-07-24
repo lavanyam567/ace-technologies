@@ -1,13 +1,24 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 
-class NotificationsScreen extends StatelessWidget {
+class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final notifications = _generateNotifications();
+  State<NotificationsScreen> createState() => _NotificationsScreenState();
+}
 
+class _NotificationsScreenState extends State<NotificationsScreen> {
+  late List<NotificationItem> _notifications;
+
+  @override
+  void initState() {
+    super.initState();
+    _notifications = _generateNotifications();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
@@ -22,6 +33,9 @@ class NotificationsScreen extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () {
+              setState(() {
+                _notifications.clear();
+              });
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('All notifications cleared')),
               );
@@ -30,13 +44,13 @@ class NotificationsScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: notifications.isEmpty
+      body: _notifications.isEmpty
           ? _buildEmptyState()
           : ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: notifications.length,
+              itemCount: _notifications.length,
               itemBuilder: (context, index) {
-                return _buildNotificationCard(context, notifications[index]);
+                return _buildNotificationCard(context, _notifications[index]);
               },
             ),
     );

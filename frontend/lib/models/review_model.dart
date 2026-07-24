@@ -7,6 +7,9 @@ class ProductReview {
   final String comment;
   final DateTime createdAt;
 
+  final String? sentiment;
+  final double? sentimentScore;
+
   const ProductReview({
     required this.id,
     required this.userId,
@@ -15,6 +18,8 @@ class ProductReview {
     required this.rating,
     required this.comment,
     required this.createdAt,
+    this.sentiment,
+    this.sentimentScore,
   });
 
   String get title {
@@ -39,6 +44,11 @@ class ProductReview {
     Map<String, dynamic> json, {
     String? userName,
   }) {
+    final sentiments = json['review_sentiments'] as List<dynamic>?;
+    final sentimentMap = (sentiments != null && sentiments.isNotEmpty)
+        ? sentiments[0] as Map<String, dynamic>?
+        : null;
+
     return ProductReview(
       id: json['id'] as String,
       userId: json['user_id'] as String,
@@ -51,6 +61,9 @@ class ProductReview {
       createdAt:
           DateTime.tryParse(json['created_at'] as String? ?? '') ??
           DateTime.now(),
+      sentiment: sentimentMap?['sentiment'] as String?,
+      sentimentScore: (sentimentMap?['score'] as num?)?.toDouble(),
     );
   }
 }
+

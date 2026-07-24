@@ -39,12 +39,27 @@ class _BookServiceScreenState extends ConsumerState<BookServiceScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authProvider);
+    if (!authState.isAuthenticated) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please sign in to book a service.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        context.go('/account');
+      });
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     final service = ref.watch(serviceByIdProvider(widget.serviceId));
     final addresses = ref.watch(savedAddressesProvider);
     final addressesLoading = ref.watch(serviceAddressesLoadingProvider);
     final addressesError = ref.watch(serviceAddressesErrorProvider);
     final bookingsError = ref.watch(serviceBookingsErrorProvider);
-    final authState = ref.watch(authProvider);
     final selectedAddressStillExists = addresses.any(
       (address) => address.id == _selectedAddressId,
     );

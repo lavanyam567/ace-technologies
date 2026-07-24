@@ -10,6 +10,7 @@ import '../../widgets/login_card.dart';
 import '../products/providers/product_providers.dart';
 import '../providers/cart_provider.dart';
 import '../services/providers/service_providers.dart';
+import '../../widgets/recommendation_carousel.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   final Function(int)? onNavigate;
@@ -42,79 +43,89 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      body: CustomScrollView(
-        slivers: [
-          // App Bar
-          SliverAppBar(
-            floating: true,
-            backgroundColor: Colors.white,
-            elevation: 0,
-            title: Row(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.asset(
-                    'assets/images/ace_technologies_logo.jpeg',
-                    width: 36,
-                    height: 36,
-                    fit: BoxFit.cover,
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await ref.read(productsProvider.notifier).loadProducts();
+          await ref.read(servicesProvider.notifier).loadServices();
+        },
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            // App Bar
+            SliverAppBar(
+              floating: true,
+              backgroundColor: Colors.white,
+              elevation: 0,
+              title: Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.asset(
+                      'assets/images/ace_technologies_logo.jpeg',
+                      width: 36,
+                      height: 36,
+                      fit: BoxFit.cover,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                const Text(
-                  'Ace Technologies',
-                  style: TextStyle(
-                    color: AppTheme.textPrimary,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
+                  const SizedBox(width: 10),
+                  const Text(
+                    'Ace Technologies',
+                    style: TextStyle(
+                      color: AppTheme.textPrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
                   ),
-                ),
-              ],
-            ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.notifications_outlined),
-                tooltip: 'Notifications',
-                onPressed: () => context.go('/notifications'),
+                ],
               ),
-            ],
-          ),
-
-          // Content
-          SliverToBoxAdapter(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Hero Section
-                _buildHeroSection(),
-
-                // Stats Row
-                _buildStatsRow(),
-
-                // Search Bar
-                _buildSearchBar(),
-
-                // Login Card
-                const LoginCard(),
-
-                // Browse Categories (Products)
-                _buildCategories(),
-
-                // Peripherals Section
-                _buildPeripherals(),
-
-                // Security & Infrastructure Section
-                _buildSecurityInfrastructure(),
-
-                // Services Section
-                _buildServicesSection(),
-
-                // Featured Products
-                _buildFeaturedProducts(),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.notifications_outlined),
+                  tooltip: 'Notifications',
+                  onPressed: () => context.push('/notifications'),
+                ),
               ],
             ),
-          ),
-        ],
+
+            // Content
+            SliverToBoxAdapter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Hero Section
+                  _buildHeroSection(),
+
+                  // Stats Row
+                  _buildStatsRow(),
+
+                  // Search Bar
+                  _buildSearchBar(),
+
+                  // Login Card
+                  const LoginCard(),
+
+                  // ✨ AI Personalised Recommendations (logged-in users only)
+                  const PersonalisedRecommendationCarousel(),
+
+                  // Browse Categories (Products)
+                  _buildCategories(),
+
+                  // Peripherals Section
+                  _buildPeripherals(),
+
+                  // Security & Infrastructure Section
+                  _buildSecurityInfrastructure(),
+
+                  // Services Section
+                  _buildServicesSection(),
+
+                  // Featured Products
+                  _buildFeaturedProducts(),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -190,13 +201,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildStatsRow() {
+    final allProducts = ref.watch(productsProvider);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
           _buildStatItem(AppConstants.clientsCount, AppConstants.clientsLabel),
           _buildStatItem(
-            AppConstants.productsCount,
+            allProducts.isNotEmpty ? '${allProducts.length}' : AppConstants.productsCount,
             AppConstants.productsLabel,
           ),
           _buildStatItem(AppConstants.yearsCount, AppConstants.yearsLabel),
@@ -287,7 +299,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildCategories() {
-    final categories = [
+    final allProducts = ref.watch(productsProvider);
+    final dbCategories = allProducts.map((p) => p.category).toSet().toList()..sort();
+
+    final List<Map<String, dynamic>> defaultCategories = [
       {'name': 'All', 'icon': Icons.apps},
       {'name': 'Processors', 'icon': Icons.memory},
       {'name': 'Laptops', 'icon': Icons.laptop},
@@ -297,6 +312,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       {'name': 'Fire Alarms', 'icon': Icons.notifications_active},
       {'name': 'Door Access', 'icon': Icons.door_sliding},
     ];
+
+    final peripheralNames = {'RAM', 'Hard Disk', 'Keyboard', 'Mouse', 'Monitor', 'Pendrive', 'Servers'};
+    final securityNames = {'TV', 'DVR', 'NVR', 'Projector', 'Cables (3+1)', 'Telephoning Solutions', 'Access Point', 'CCTV Cameras', 'Fire Alarms', 'Door Access'};
+
+    final categories = <Map<String, dynamic>>[];
+    if (dbCategories.isEmpty) {
+      categories.addAll(defaultCategories);
+    } else {
+      categories.add({'name': 'All', 'icon': Icons.apps});
+      final generalCats = dbCategories.where((c) => !peripheralNames.contains(c) && !securityNames.contains(c)).toList();
+      for (final cat in generalCats) {
+        categories.add({'name': cat, 'icon': _getCategoryIcon(cat)});
+      }
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -345,7 +374,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildPeripherals() {
-    final peripherals = [
+    final allProducts = ref.watch(productsProvider);
+    final dbCategories = allProducts.map((p) => p.category).toSet().toList();
+
+    final List<Map<String, dynamic>> defaultPeripherals = [
       {'name': 'RAM', 'icon': Icons.memory},
       {'name': 'Hard Disk', 'icon': Icons.storage},
       {'name': 'Keyboard', 'icon': Icons.keyboard},
@@ -353,6 +385,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       {'name': 'Monitor', 'icon': Icons.monitor},
       {'name': 'Pendrive', 'icon': Icons.usb},
     ];
+
+    final peripheralNames = {'RAM', 'Hard Disk', 'Keyboard', 'Mouse', 'Monitor', 'Pendrive', 'Servers'};
+    final pCats = dbCategories.where((c) => peripheralNames.contains(c)).toList()..sort();
+    final peripherals = pCats.isNotEmpty
+        ? pCats.map((cat) => {'name': cat, 'icon': _getCategoryIcon(cat)}).toList()
+        : defaultPeripherals;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -396,7 +434,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildSecurityInfrastructure() {
-    final items = [
+    final allProducts = ref.watch(productsProvider);
+    final dbCategories = allProducts.map((p) => p.category).toSet().toList();
+
+    final List<Map<String, dynamic>> defaultSecurity = [
       {'name': 'TV', 'icon': Icons.tv},
       {'name': 'DVR', 'icon': Icons.video_library},
       {'name': 'NVR', 'icon': Icons.sd_card},
@@ -405,6 +446,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       {'name': 'Telephoning Solutions', 'icon': Icons.phone},
       {'name': 'Access Point', 'icon': Icons.router},
     ];
+
+    final securityNames = {'TV', 'DVR', 'NVR', 'Projector', 'Cables (3+1)', 'Telephoning Solutions', 'Access Point', 'CCTV Cameras', 'Fire Alarms', 'Door Access'};
+    final sCats = dbCategories.where((c) => securityNames.contains(c)).toList()..sort();
+    final items = sCats.isNotEmpty
+        ? sCats.map((cat) => {'name': cat, 'icon': _getCategoryIcon(cat)}).toList()
+        : defaultSecurity;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -499,9 +546,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               return ServiceCard(
                 service: services[index],
                 onBookNow: () =>
-                    context.go('/service/${services[index].id}/book'),
+                    context.push('/service/${services[index].id}/book'),
                 onTap: () {
-                  context.go('/service/${services[index].id}');
+                  context.push('/service/${services[index].id}');
                 },
               );
             },
@@ -568,7 +615,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: isWide ? 2 : 2,
-                  mainAxisExtent: isWide ? 310 : null,
+                  mainAxisExtent: isWide ? 335 : null,
                   childAspectRatio: isWide ? 1 : 0.5,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
@@ -578,7 +625,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   return ProductCard(
                     product: products[index],
                     onTap: () {
-                      context.go('/product/${products[index].id}');
+                      context.push('/product/${products[index].id}');
                     },
                     onAddToCart: () async {
                       try {
@@ -612,5 +659,47 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         const SizedBox(height: 16),
       ],
     );
+  }
+
+  IconData _getCategoryIcon(String name) {
+    switch (name.toLowerCase()) {
+      case 'processors':
+      case 'ram':
+        return Icons.memory;
+      case 'laptops':
+        return Icons.laptop;
+      case 'networking':
+      case 'access point':
+        return Icons.router;
+      case 'printers':
+        return Icons.print;
+      case 'cctv cameras':
+      case 'dvr':
+      case 'nvr':
+        return Icons.videocam;
+      case 'fire alarms':
+        return Icons.notifications_active;
+      case 'door access':
+        return Icons.door_sliding;
+      case 'hard disk':
+        return Icons.storage;
+      case 'keyboard':
+        return Icons.keyboard;
+      case 'mouse':
+        return Icons.mouse;
+      case 'monitor':
+      case 'tv':
+        return Icons.monitor;
+      case 'pendrive':
+        return Icons.usb;
+      case 'projector':
+        return Icons.adjust;
+      case 'cables (3+1)':
+        return Icons.cable;
+      case 'telephoning solutions':
+        return Icons.phone;
+      default:
+        return Icons.category;
+    }
   }
 }

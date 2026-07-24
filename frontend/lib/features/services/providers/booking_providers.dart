@@ -248,7 +248,7 @@ class SavedServiceAddressesNotifier extends StateNotifier<List<Address>> {
       final addresses = await SupabaseService.instance.fetchAddresses();
       state = addresses
           .map(
-            (address) => Address(
+            (dynamic address) => Address(
               id: address.id,
               name: address.name,
               phone: address.phone,

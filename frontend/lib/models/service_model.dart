@@ -1,3 +1,5 @@
+import '../core/utils/formatters.dart';
+
 class Service {
   final String id;
   final String title;
@@ -19,10 +21,7 @@ class Service {
 
   // Format price for display - handles null safely
   String get formattedPrice {
-    if (price == null) {
-      return 'Contact for price';
-    }
-    return '₹${price!.toStringAsFixed(0)}';
+    return CurrencyUtils.formatPrice(price);
   }
 
   // Check if price is available
@@ -45,10 +44,7 @@ class Service {
 
   // Get starting price text
   String get priceLabel {
-    if (price == null || price! <= 0) {
-      return 'Contact for price';
-    }
-    return 'Starting from ₹${price!.toStringAsFixed(0)}';
+    return CurrencyUtils.getPriceLabel(price);
   }
 
   factory Service.fromJson(Map<String, dynamic> json) {

@@ -143,7 +143,42 @@ class ProductsNotifier extends StateNotifier<List<Product>> {
 
     try {
       final products = await SupabaseService.instance.fetchProducts();
-      state = products;
+      state = products
+          .where((p) => p.name != 'API Test Laptop' && p.id != 'api_test')
+          .map((p) {
+            if (p.id == 'gbs_asus_laptop_sales_service') {
+              return p.copyWith(
+                name: 'Asus Laptop',
+                description: 'High-performance Asus laptop for home and business use.',
+              );
+            }
+            if (p.id == 'gbs_lenovo_laptop_sales_repair') {
+              return p.copyWith(
+                name: 'Lenovo Laptop',
+                description: 'Reliable Lenovo ThinkPad laptop for professionals.',
+              );
+            }
+            if (p.id == 'gbs_dell_laptop_sales_service') {
+              return p.copyWith(
+                name: 'Dell Laptop',
+                description: 'Powerful Dell Latitude laptop for multitasking and everyday use.',
+              );
+            }
+            if (p.id == 'gbs_hp_laptop_sales_repair') {
+              return p.copyWith(
+                name: 'HP Laptop',
+                description: 'HP laptop featuring micro-edge display and backlit keyboard.',
+              );
+            }
+            if (p.id == 'gbs_acer_laptop_sales_service') {
+              return p.copyWith(
+                name: 'Acer Laptop',
+                description: 'Acer laptop with dynamic display and long battery life.',
+              );
+            }
+            return p;
+          })
+          .toList();
     } catch (error) {
       state = [];
       ref.read(productsErrorProvider.notifier).state = error.toString();

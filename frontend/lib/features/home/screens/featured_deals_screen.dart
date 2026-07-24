@@ -17,14 +17,24 @@ class FeaturedDealsScreen extends ConsumerStatefulWidget {
 
 class _FeaturedDealsScreenState extends ConsumerState<FeaturedDealsScreen> {
   String _selectedCategory = 'All';
+  List<String> _categories = ['All'];
 
-  final List<String> _categories = [
-    'All',
-    'Processors',
-    'Laptops',
-    'Networking',
-    'Printers',
-  ];
+  @override
+  void initState() {
+    super.initState();
+    final products = ref.read(productsProvider);
+    final dealCats = products
+        .where((p) => p.discount > 0)
+        .map((p) => p.category)
+        .toSet()
+        .toList()
+      ..sort();
+    if (dealCats.isNotEmpty) {
+      _categories = ['All', ...dealCats];
+    } else {
+      _categories = ['All', 'Processors', 'Laptops', 'Networking', 'Printers'];
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -156,7 +166,7 @@ class _FeaturedDealsScreenState extends ConsumerState<FeaturedDealsScreen> {
                     itemBuilder: (context, index) {
                       return ProductCard(
                         product: deals[index],
-                        onTap: () => context.go('/product/${deals[index].id}'),
+                        onTap: () => context.push('/product/${deals[index].id}'),
                         onAddToCart: () async {
                           try {
                             await ref

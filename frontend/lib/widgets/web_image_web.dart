@@ -28,7 +28,9 @@ Widget? buildWebImage({
         ..setAttribute('decoding', 'async')
         ..setAttribute('loading', 'lazy');
       image.onError.listen((_) {
-        image.style.display = 'none';
+        if (image.src != 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=600&q=80') {
+          image.src = 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=600&q=80';
+        }
       });
       return image;
     });

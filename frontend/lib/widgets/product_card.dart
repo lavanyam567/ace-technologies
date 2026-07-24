@@ -201,33 +201,14 @@ class ProductCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 2),
-                        // Brand + Rating Row
-                        Row(
-                          children: [
-                            Text(
-                              product.brand,
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                            const Spacer(),
-                            Icon(
-                              Icons.star,
-                              size: 12,
-                              color: AppTheme.warningColor,
-                            ),
-                            const SizedBox(width: 2),
-                            Text(
-                              product.rating.toStringAsFixed(1),
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.grey.shade700,
-                              ),
-                            ),
-                          ],
+                        // Brand only (no rating)
+                        Text(
+                          product.brand,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey.shade600,
+                          ),
                         ),
                         const SizedBox(height: 2),
                         // Original Price (strikethrough)

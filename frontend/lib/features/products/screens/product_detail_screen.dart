@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../widgets/cached_image.dart';
+import '../../../widgets/recommendation_carousel.dart';
+import '../../../widgets/sentiment_badge.dart';
+import '../../../core/services/supabase_service.dart';
 import '../../products/providers/product_providers.dart';
 import '../../products/providers/wishlist_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/auth_provider.dart';
 
 class ProductDetailScreen extends ConsumerStatefulWidget {
   final String productId;
@@ -40,6 +45,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         ref.read(recentlyViewedProvider.notifier).addToRecent(product);
+        SupabaseService.instance.trackActivity(product.id, 'view');
       });
     }
 
@@ -56,6 +62,16 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             backgroundColor: Colors.white,
             pinned: true,
             expandedHeight: 350,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/');
+                }
+              },
+            ),
             actions: [
               IconButton(
                 icon: Icon(
@@ -80,9 +96,16 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
               ),
               IconButton(
                 icon: const Icon(Icons.share),
-                onPressed: () {
+                onPressed: () async {
+                  final shareUrl = Uri.base.origin.startsWith('http')
+                      ? '${Uri.base.origin}/#/product/${product.id}'
+                      : 'https://acetechnologies.com/product/${product.id}';
+                  await Clipboard.setData(ClipboardData(text: shareUrl));
+                  if (!context.mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Share link copied!')),
+                    SnackBar(
+                      content: Text('Product link copied to clipboard: $shareUrl'),
+                    ),
                   );
                 },
               ),
@@ -240,46 +263,6 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                   ),
                   const SizedBox(height: 8),
 
-                  // Rating
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppTheme.warningColor,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.star,
-                              color: Colors.white,
-                              size: 14,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              product.rating.toStringAsFixed(1),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '125 reviews',
-                        style: TextStyle(color: Colors.grey.shade600),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
                   // Price
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -411,151 +394,44 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             ),
           ),
 
-          // Reviews Button
-          SliverToBoxAdapter(
-            child: Container(
-              margin: const EdgeInsets.only(top: 8),
-              color: Colors.white,
-              padding: const EdgeInsets.all(16),
-              child: InkWell(
-                onTap: () => context.go('/product/${product.id}/reviews'),
-                child: Row(
+          // Description Section
+          if (product.description.isNotEmpty)
+            SliverToBoxAdapter(
+              child: Container(
+                margin: const EdgeInsets.only(top: 8),
+                color: Colors.white,
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Reviews',
+                      'Description',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      product.description,
                       style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Colors.grey.shade700,
+                        height: 1.5,
                       ),
                     ),
-                    const Spacer(),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.star,
-                          color: AppTheme.warningColor,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${product.rating} (125 reviews)',
-                          style: TextStyle(color: Colors.grey.shade600),
-                        ),
-                      ],
-                    ),
-                    const Icon(Icons.chevron_right),
                   ],
                 ),
               ),
             ),
+
+
+
+          // Sentiment Analysis overview for product reviews
+          SliverToBoxAdapter(
+            child: SentimentOverviewCard(productId: product.id),
           ),
 
-          // Similar Products
+          // Similar Products (dynamic recommendations based on category)
           SliverToBoxAdapter(
-            child: Container(
-              margin: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Similar Products',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 220,
-                    child: Builder(
-                      builder: (context) {
-                        final similarProducts = ref
-                            .watch(productsProvider)
-                            .where(
-                              (item) =>
-                                  item.id != product.id &&
-                                  item.category == product.category,
-                            )
-                            .take(4)
-                            .toList();
-
-                        if (similarProducts.isEmpty) {
-                          return Center(
-                            child: Text(
-                              'No similar products available',
-                              style: TextStyle(color: Colors.grey.shade600),
-                            ),
-                          );
-                        }
-
-                        return ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: similarProducts.length,
-                          itemBuilder: (context, index) {
-                            final similarProduct = similarProducts[index];
-                            return Container(
-                              width: 150,
-                              margin: const EdgeInsets.only(right: 12),
-                              child: Card(
-                                child: InkWell(
-                                  onTap: () => context.go(
-                                    '/product/${similarProduct.id}',
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      ClipRRect(
-                                        borderRadius:
-                                            const BorderRadius.vertical(
-                                              top: Radius.circular(12),
-                                            ),
-                                        child: Container(
-                                          height: 100,
-                                          color: Colors.grey.shade100,
-                                          child: Image.network(
-                                            similarProduct.image,
-                                            fit: BoxFit.cover,
-                                          ),
-                                        ),
-                                      ),
-                                      Padding(
-                                        padding: const EdgeInsets.all(8),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              similarProduct.name,
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              CurrencyUtils.formatPrice(
-                                                similarProduct.price,
-                                              ),
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                color: AppTheme.primaryColor,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            child: SimilarProductsCarousel(productId: product.id),
           ),
 
           const SliverToBoxAdapter(child: SizedBox(height: 100)),
@@ -591,6 +467,16 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                   onPressed: product.isOutOfStock
                       ? null
                       : () {
+                          if (!ref.read(authProvider).isAuthenticated) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Please sign in to purchase items.'),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                            context.push('/account');
+                            return;
+                          }
                           for (int i = 0; i < _quantity; i++) {
                             ref.read(cartProvider.notifier).addToCart(product);
                           }

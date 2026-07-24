@@ -6,12 +6,58 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../widgets/cached_image.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/auth_provider.dart';
 
 class CartScreen extends ConsumerWidget {
   const CartScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final auth = ref.watch(authProvider);
+
+    if (!auth.isAuthenticated) {
+      return Scaffold(
+        backgroundColor: AppTheme.backgroundColor,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          title: const Text(
+            'Shopping Cart',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.shopping_cart_outlined, size: 72, color: Colors.grey.shade400),
+                const SizedBox(height: 16),
+                const Text(
+                  'Sign in to view your cart',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Please sign in to add products to your cart and make purchases.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey.shade600),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () => context.go('/account'),
+                  child: const Text('Sign In'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     final items = ref.watch(cartProvider);
     final subtotal = ref.watch(cartTotalProvider);
     final isLoading = ref.watch(cartLoadingProvider);

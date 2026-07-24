@@ -29,14 +29,11 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     final auth = ref.watch(authProvider);
 
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
         title: const Text(
           'Account',
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: AppTheme.textPrimary,
           ),
         ),
       ),
@@ -168,7 +165,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
@@ -222,36 +219,37 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
         if (auth.isAdmin) ...[
           _MenuItem(
             icon: Icons.admin_panel_settings_outlined,
-            title: 'Admin Orders',
+            title: 'Admin Console',
             onTap: () => context.go('/admin/orders'),
           ),
           const SizedBox(height: 8),
+        ] else ...[
+          _MenuItem(
+            icon: Icons.shopping_bag_outlined,
+            title: 'Orders',
+            onTap: () => context.push('/orders'),
+          ),
+          _MenuItem(
+            icon: Icons.favorite_outline,
+            title: 'Wishlist',
+            onTap: () => context.push('/wishlist'),
+          ),
+          _MenuItem(
+            icon: Icons.location_on_outlined,
+            title: 'Address',
+            onTap: () => context.push('/checkout/address'),
+          ),
+          _MenuItem(
+            icon: Icons.notifications_outlined,
+            title: 'Notifications',
+            onTap: () => context.push('/notifications'),
+          ),
+          _MenuItem(
+            icon: Icons.settings_outlined,
+            title: 'Settings',
+            onTap: () => context.push('/settings'),
+          ),
         ],
-        _MenuItem(
-          icon: Icons.shopping_bag_outlined,
-          title: 'Orders',
-          onTap: () => context.go('/orders'),
-        ),
-        _MenuItem(
-          icon: Icons.favorite_outline,
-          title: 'Wishlist',
-          onTap: () => context.go('/wishlist'),
-        ),
-        _MenuItem(
-          icon: Icons.location_on_outlined,
-          title: 'Address',
-          onTap: () => context.go('/checkout/address'),
-        ),
-        _MenuItem(
-          icon: Icons.notifications_outlined,
-          title: 'Notifications',
-          onTap: () => context.go('/notifications'),
-        ),
-        _MenuItem(
-          icon: Icons.settings_outlined,
-          title: 'Settings',
-          onTap: () => context.go('/settings'),
-        ),
         const SizedBox(height: 16),
         OutlinedButton.icon(
           onPressed: () => ref.read(authProvider.notifier).logout(),
@@ -279,7 +277,7 @@ class _MenuItem extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
       ),
       child: ListTile(

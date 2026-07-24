@@ -1,3 +1,5 @@
+import '../core/utils/formatters.dart';
+
 class Product {
   final String id;
   final String name;
@@ -18,7 +20,7 @@ class Product {
     required this.brand,
     required this.price,
     this.originalPrice,
-    required this.rating,
+    this.rating = 0.0,
     required this.image,
     this.additionalImages = const [],
     this.isOutOfStock = false,
@@ -27,11 +29,8 @@ class Product {
     this.description = '',
   });
 
-  // Calculate discounted price
-  double get discountedPrice {
-    if (originalPrice != null && originalPrice! > 0) {
-      return originalPrice! - (originalPrice! * discount / 100);
-    }
+  // Calculate dynamic active price
+  double get activePrice {
     return price;
   }
 
@@ -39,10 +38,10 @@ class Product {
   bool get hasDiscount => discount > 0;
 
   // Format price for display
-  String get formattedPrice => '₹${price.toStringAsFixed(0)}';
+  String get formattedPrice => CurrencyUtils.formatPrice(price);
   
   String get formattedOriginalPrice => originalPrice != null 
-      ? '₹${originalPrice!.toStringAsFixed(0)}' 
+      ? CurrencyUtils.formatPrice(originalPrice)
       : '';
 
   // Calculate savings amount
@@ -52,12 +51,12 @@ class Product {
 
   // Format savings for display
   String get formattedSavings => savings > 0 
-      ? '₹${savings.toStringAsFixed(0)}' 
+      ? CurrencyUtils.formatPrice(savings)
       : '';
 
   // Safe formatted price - never shows NaN
   String get safeFormattedPrice => price > 0 
-      ? '₹${price.toStringAsFixed(0)}' 
+      ? CurrencyUtils.formatPrice(price)
       : 'Contact for Price';
 
   // Safe image getter - returns valid URL or fallback
@@ -238,6 +237,7 @@ class SampleProducts {
       ],
       discount: 14,
       category: 'Laptops',
+      description: 'HP 15, AMD Ryzen 5 7520U (8GB LPDDR5, 512GB SSD) FHD, Anti-Glare, Micro-Edge, 15.6\'\'/39.6cm, Win11, M365 Basic(1yr), Office 24, Silver, 1.59kg, fc0805AU, FHD Camera w/Privacy Shutter, Backlit Laptop. Visit the HP Store.',
     ),
     const Product(
       id: 'lap_002',

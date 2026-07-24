@@ -135,7 +135,7 @@ class _SearchResultsScreenState extends ConsumerState<SearchResultsScreen> {
             itemBuilder: (context, index) {
               return ProductCard(
                 product: results[index],
-                onTap: () => context.go('/product/${results[index].id}'),
+                onTap: () => context.push('/product/${results[index].id}'),
                 onAddToCart: () async {
                   try {
                     await ref

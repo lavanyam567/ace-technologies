@@ -42,7 +42,7 @@ class AceImage extends StatelessWidget {
       placeholder: (context, url) =>
           _ImagePlaceholder(width: width, height: height),
       errorWidget: (context, url, error) =>
-          _ImageError(width: width, height: height),
+          _ImageError(width: width, height: height, fit: fit),
     );
 
     return _clipIfNeeded(img);
@@ -77,21 +77,28 @@ class _ImagePlaceholder extends StatelessWidget {
 }
 
 class _ImageError extends StatelessWidget {
-  const _ImageError({this.width, this.height});
+  const _ImageError({this.width, this.height, this.fit = BoxFit.cover});
 
   final double? width;
   final double? height;
+  final BoxFit fit;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return Image.network(
+      'https://images.unsplash.com/photo-1518770660439-4636190af475?w=600&q=80',
       width: width,
       height: height,
-      color: const Color(0xFF1E2A3A),
-      child: const Icon(
-        Icons.image_not_supported_outlined,
-        color: Color(0xFF1D9E75),
-        size: 32,
+      fit: fit,
+      errorBuilder: (context, error, stackTrace) => Container(
+        width: width,
+        height: height,
+        color: const Color(0xFF1E2A3A),
+        child: const Icon(
+          Icons.image_not_supported_outlined,
+          color: Color(0xFF1D9E75),
+          size: 32,
+        ),
       ),
     );
   }

@@ -5,6 +5,8 @@ import '../../models/product_model.dart';
 import '../../models/service_model.dart';
 import '../../models/order_model.dart';
 import '../../models/review_model.dart';
+import '../../models/recommendation_model.dart';
+import '../../features/services/providers/booking_providers.dart' hide Address;
 
 class SupabaseService {
   SupabaseService._();
@@ -32,6 +34,8 @@ class SupabaseService {
     status,
     address_id,
     payment_method,
+    payment_status,
+    payment_reference,
     tracking_number,
     order_items (
       id,
@@ -50,7 +54,19 @@ class SupabaseService {
     status,
     address_id,
     payment_method,
-    tracking_number
+    payment_status,
+    payment_reference,
+    tracking_number,
+    addresses (
+      id,
+      name,
+      phone,
+      address_line1,
+      address_line2,
+      city,
+      state,
+      pincode
+    )
   ''';
   static const String _orderItemSelect =
       '''
@@ -83,6 +99,62 @@ class SupabaseService {
         .eq('is_active', true)
         .order('created_at', ascending: false);
     return rows.map<Service>((row) => Service.fromSupabase(row)).toList();
+  }
+
+  Future<List<String>> fetchCategories() async {
+    final rows = await _client
+        .from('categories')
+        .select('name')
+        .order('sort_order', ascending: true);
+    return rows.map<String>((row) => row['name'] as String).toList();
+  }
+
+  Future<void> addProduct({
+    required String id,
+    required String name,
+    required String brand,
+    required double price,
+    double? originalPrice,
+    required int stock,
+    required String category,
+    required String description,
+    required String imageUrl,
+    required int discount,
+  }) async {
+    await _requireAdmin();
+    await _client.from('products').insert({
+      'id': id,
+      'name': name,
+      'brand': brand,
+      'price': price,
+      'original_price': originalPrice,
+      'stock': stock,
+      'category': category,
+      'description': description,
+      'image_url': imageUrl,
+      'discount': discount,
+      'is_active': true,
+    });
+  }
+
+  Future<void> addService({
+    required String id,
+    required String title,
+    required String description,
+    double? price,
+    required String imageUrl,
+    required List<String> features,
+  }) async {
+    await _requireAdmin();
+    await _client.from('services').insert({
+      'id': id,
+      'title': title,
+      'description': description,
+      'price': price,
+      'image_url': imageUrl,
+      'features': features,
+      'is_active': true,
+    });
   }
 
   Future<List<Order>> fetchOrders() async {
@@ -475,7 +547,7 @@ class SupabaseService {
   Future<List<ProductReview>> fetchProductReviews(String productId) async {
     final rows = await _client
         .from('reviews')
-        .select('id, user_id, product_id, rating, comment, created_at')
+        .select('id, user_id, product_id, rating, comment, created_at, review_sentiments(sentiment, score)')
         .eq('product_id', productId)
         .order('created_at', ascending: false);
 
@@ -500,7 +572,7 @@ class SupabaseService {
     final user = _requireUser();
     final row = await _client
         .from('reviews')
-        .select('id, user_id, product_id, rating, comment, created_at')
+        .select('id, user_id, product_id, rating, comment, created_at, review_sentiments(sentiment, score)')
         .eq('user_id', user.id)
         .eq('product_id', productId)
         .maybeSingle();
@@ -979,4 +1051,182 @@ class SupabaseService {
         .maybeSingle();
     return row?['full_name'] as String?;
   }
+
+  Future<List<ServiceBooking>> fetchAdminServiceBookings() async {
+    await _requireAdmin();
+    final rows = await _client
+        .from('service_bookings')
+        .select('''
+          id,
+          user_id,
+          service_id,
+          address_id,
+          customer_name,
+          customer_phone,
+          customer_email,
+          booking_date,
+          time_slot,
+          status,
+          notes,
+          total_price,
+          created_at,
+          services (
+            id,
+            title,
+            description,
+            price,
+            image_url,
+            additional_images,
+            features
+          ),
+          addresses (
+            id,
+            name,
+            phone,
+            address_line1,
+            address_line2,
+            city,
+            state,
+            pincode,
+            is_default,
+            label,
+            type
+          )
+        ''')
+        .order('created_at', ascending: false);
+
+    return rows.map<ServiceBooking>((row) => ServiceBooking.fromSupabase(row)).toList();
+  }
+
+  Future<void> updateAdminServiceBookingStatus({
+    required String bookingId,
+    required String status,
+  }) async {
+    await _requireAdmin();
+    await _client
+        .from('service_bookings')
+        .update({'status': status})
+        .eq('id', bookingId);
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // NLP Recommendations & Sentiment Analysis
+  // ──────────────────────────────────────────────────────────
+
+  /// Silently records a user interaction for collaborative filtering.
+  /// [actionType] must be one of: 'view', 'cart', 'purchase'.
+  Future<void> trackActivity(String productId, String actionType) async {
+    final user = currentUser;
+    if (user == null) return; // Only track for logged-in users
+    try {
+      await _client.from('user_activity').insert({
+        'user_id': user.id,
+        'product_id': productId,
+        'action_type': actionType,
+      });
+    } catch (_) {
+      // Fire-and-forget: never crash the UI for tracking failures.
+    }
+  }
+
+  /// Returns personalised product recommendations via collaborative filtering.
+  /// Falls back to top-rated products if no activity data exists.
+  Future<List<Product>> fetchRecommendations() async {
+    final user = currentUser;
+    if (user == null) return [];
+
+    try {
+      final rows = await _client
+          .rpc('get_recommendations_for_user', params: {'p_user_id': user.id})
+          .limit(10);
+
+      final products = (rows as List<dynamic>)
+          .map<Product>((row) => Product.fromSupabase(row as Map<String, dynamic>))
+          .toList();
+
+      // If the user is new (no activity), fall back to top-rated products
+      if (products.isEmpty) {
+        final fallback = await _client
+            .from('products')
+            .select()
+            .eq('is_active', true)
+            .order('rating', ascending: false)
+            .limit(8);
+        return fallback
+            .map<Product>((row) => Product.fromSupabase(row))
+            .toList();
+      }
+      return products;
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Returns products in the same category — used in product detail screen.
+  Future<List<Product>> fetchSimilarProducts(String productId) async {
+    try {
+      final rows = await _client
+          .rpc('get_similar_products', params: {'p_product_id': productId})
+          .limit(8);
+      return (rows as List<dynamic>)
+          .map<Product>((row) => Product.fromSupabase(row as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Returns aggregated sentiment counts for a product's reviews.
+  Future<SentimentSummary> fetchProductSentimentSummary(
+      String productId) async {
+    try {
+      final rows = await _client.rpc(
+        'get_product_sentiment_summary',
+        params: {'p_product_id': productId},
+      );
+      if (rows == null || (rows as List).isEmpty) {
+        return SentimentSummary.empty();
+      }
+      return SentimentSummary.fromSupabase(rows[0] as Map<String, dynamic>);
+    } catch (_) {
+      return SentimentSummary.empty();
+    }
+  }
+
+  /// Admin: Returns sentiment summary for ALL products.
+  Future<List<AdminSentimentRow>> fetchAllSentimentsSummary() async {
+    await _requireAdmin();
+    try {
+      final rows = await _client.rpc('get_all_sentiments_summary');
+      return (rows as List<dynamic>)
+          .map<AdminSentimentRow>(
+              (row) => AdminSentimentRow.fromSupabase(row as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Calls the analyze-sentiment Edge Function asynchronously.
+  /// Fire-and-forget — does not await on the UI call site.
+  Future<void> analyzeSentiment({
+    required String reviewId,
+    required String productId,
+    required String text,
+  }) async {
+    if (text.trim().isEmpty) return;
+    try {
+      await _client.functions.invoke(
+        'analyze-sentiment',
+        body: {
+          'review_id': reviewId,
+          'product_id': productId,
+          'text': text,
+        },
+      );
+    } catch (_) {
+      // Sentiment analysis is non-critical — never crash the app.
+    }
+  }
 }
+

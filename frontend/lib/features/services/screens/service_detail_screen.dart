@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
@@ -59,10 +60,20 @@ class ServiceDetailScreen extends ConsumerWidget {
       body: CustomScrollView(
         slivers: [
           // App Bar with Image
-          SliverAppBar(
+           SliverAppBar(
             expandedHeight: 200,
             pinned: true,
             backgroundColor: AppTheme.primaryColor,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/');
+                }
+              },
+            ),
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
                 decoration: BoxDecoration(
@@ -85,9 +96,23 @@ class ServiceDetailScreen extends ConsumerWidget {
               ),
             ),
             actions: [
-              IconButton(icon: const Icon(Icons.share), onPressed: () {}),
               IconButton(
-                icon: const Icon(Icons.favorite_border),
+                icon: const Icon(Icons.share, color: Colors.white),
+                onPressed: () async {
+                  final shareUrl = Uri.base.origin.startsWith('http')
+                      ? '${Uri.base.origin}/#/service/${service.id}'
+                      : 'https://acetechnologies.com/service/${service.id}';
+                  await Clipboard.setData(ClipboardData(text: shareUrl));
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Service link copied to clipboard: $shareUrl'),
+                    ),
+                  );
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.favorite_border, color: Colors.white),
                 onPressed: () {},
               ),
             ],

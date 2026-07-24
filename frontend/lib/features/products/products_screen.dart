@@ -51,7 +51,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     {'name': 'Access Point', 'icon': Icons.router},
   ];
 
-  final List<String> _allBrands = [
+  List<String> _allBrands = [
     'Dell',
     'Lenovo',
     'HP',
@@ -132,16 +132,55 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     }
   }
 
+  IconData _getCategoryIcon(String category) {
+    final lower = category.toLowerCase();
+    if (lower.contains('processor') || lower.contains('cpu')) return Icons.memory;
+    if (lower.contains('laptop')) return Icons.laptop;
+    if (lower.contains('network') || lower.contains('router') || lower.contains('switch')) return Icons.router;
+    if (lower.contains('print')) return Icons.print;
+    if (lower.contains('cctv') || lower.contains('camera')) return Icons.videocam;
+    if (lower.contains('alarm') || lower.contains('fire')) return Icons.notifications_active;
+    if (lower.contains('door') || lower.contains('access')) return Icons.door_sliding;
+    if (lower.contains('ram') || lower.contains('memory')) return Icons.memory;
+    if (lower.contains('disk') || lower.contains('storage') || lower.contains('ssd') || lower.contains('hdd')) return Icons.storage;
+    if (lower.contains('keyboard')) return Icons.keyboard;
+    if (lower.contains('mouse')) return Icons.mouse;
+    if (lower.contains('monitor') || lower.contains('screen')) return Icons.monitor;
+    if (lower.contains('usb') || lower.contains('drive') || lower.contains('pen')) return Icons.usb;
+    if (lower.contains('server')) return Icons.dns;
+    return Icons.category;
+  }
+
   @override
   Widget build(BuildContext context) {
     final filtered = ref.watch(filteredProductsProvider);
     final filterState = ref.watch(productFilterProvider);
-    final totalCount = ref.watch(allProductsProvider).length;
+    final allProducts = ref.watch(allProductsProvider);
+    final totalCount = allProducts.length;
+
+    // Dynamically update brands from DB products
+    final dbBrands = allProducts.map((p) => p.brand).toSet().toList()..sort();
+    if (dbBrands.isNotEmpty) {
+      _allBrands = dbBrands;
+    }
+
+    // Dynamically find other categories
+    final dbCategories = allProducts.map((p) => p.category).toSet().toList()..sort();
+    final knownCategories = <String>{
+      ..._productCategories.map((c) => c['name'] as String),
+      ..._peripheralCategories.map((c) => c['name'] as String),
+      ..._securityCategories.map((c) => c['name'] as String),
+    };
+    final newCats = dbCategories.where((cat) => !knownCategories.contains(cat)).toList();
+    final otherCategories = newCats.map((cat) => {
+      'name': cat,
+      'icon': _getCategoryIcon(cat),
+    }).toList();
 
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: AppTheme.backgroundColor,
-      endDrawer: _buildFilterDrawer(filterState),
+      endDrawer: _buildFilterDrawer(filterState, otherCategories),
       appBar: AppBar(
         backgroundColor: Colors.white,
         title: const Text(
@@ -348,6 +387,64 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
               },
             ),
           ),
+          // Other Infrastructure Section (Dynamic)
+          if (otherCategories.isNotEmpty) ...[
+            Container(
+              color: Colors.white,
+              padding: const EdgeInsets.only(left: 16, top: 12, bottom: 4),
+              child: const Text(
+                'Other Infrastructure',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+            ),
+            Container(
+              color: Colors.white,
+              height: 50,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: otherCategories.length,
+                itemBuilder: (context, index) {
+                  final cat = otherCategories[index];
+                  final name = cat['name'] as String;
+                  final isSelected = filterState.category == name;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: FilterChip(
+                      avatar: Icon(
+                        cat['icon'] as IconData,
+                        size: 18,
+                        color: isSelected ? Colors.white : AppTheme.primaryColor,
+                      ),
+                      label: Text(name),
+                      selected: isSelected,
+                      onSelected: (_) => ref
+                          .read(productFilterProvider.notifier)
+                          .setCategory(name),
+                      selectedColor: AppTheme.primaryColor,
+                      backgroundColor: Colors.white,
+                      side: BorderSide(
+                        color: isSelected
+                            ? AppTheme.primaryColor
+                            : Colors.grey.shade300,
+                      ),
+                      checkmarkColor: Colors.white,
+                      labelStyle: TextStyle(
+                        color: isSelected ? Colors.white : AppTheme.textSecondary,
+                        fontWeight: isSelected
+                            ? FontWeight.w600
+                            : FontWeight.normal,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
           // Results count
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
@@ -369,26 +466,36 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
 
   Widget _buildProductsGrid(List<Product> products) {
     if (products.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.inventory_2_outlined,
-              size: 64,
-              color: Colors.grey.shade400,
+      return RefreshIndicator(
+        onRefresh: () async {
+          await ref.read(productsProvider.notifier).loadProducts();
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Container(
+            height: 400,
+            alignment: Alignment.center,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.inventory_2_outlined,
+                  size: 64,
+                  color: Colors.grey.shade400,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No products found in this category',
+                  style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Check back soon or explore other categories',
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            Text(
-              'No products found in this category',
-              style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Check back soon or explore other categories',
-              style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
-            ),
-          ],
+          ),
         ),
       );
     }
@@ -399,15 +506,19 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
             : constraints.maxWidth >= 900
             ? 3
             : 2;
-        return GridView.builder(
-          padding: const EdgeInsets.all(16),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            mainAxisExtent: constraints.maxWidth >= 900 ? 310 : null,
-            childAspectRatio: constraints.maxWidth >= 900 ? 1 : 0.52,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-          ),
+        return RefreshIndicator(
+          onRefresh: () async {
+            await ref.read(productsProvider.notifier).loadProducts();
+          },
+          child: GridView.builder(
+            padding: const EdgeInsets.all(16),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              mainAxisExtent: constraints.maxWidth >= 900 ? 335 : null,
+              childAspectRatio: constraints.maxWidth >= 900 ? 1 : 0.52,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+            ),
           itemCount: products.length,
           itemBuilder: (context, index) {
             final product = products[index];
@@ -416,7 +527,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
               product: product,
               isWishlisted: isWishlisted,
               onTap: () {
-                context.go('/product/${product.id}');
+                context.push('/product/${product.id}');
               },
               onAddToCart: () {
                 ref.read(cartProvider.notifier).addToCart(product);
@@ -456,12 +567,16 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
               },
             );
           },
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 
-  Widget _buildFilterDrawer(ProductFilter filterState) {
+  Widget _buildFilterDrawer(
+    ProductFilter filterState,
+    List<Map<String, dynamic>> otherCategories,
+  ) {
     return Drawer(
       width: 300,
       child: SafeArea(
@@ -595,10 +710,11 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                       _buildExpandableSection(
                         'Categories',
                         [
-                          ..._productCategories.map((c) => c['name'] as String),
-                          ..._peripheralCategories.map(
-                            (c) => c['name'] as String,
-                          ),
+                          'All',
+                          ..._productCategories.map((c) => c['name'] as String).where((n) => n != 'All'),
+                          ..._peripheralCategories.map((c) => c['name'] as String),
+                          ..._securityCategories.map((c) => c['name'] as String),
+                          ...otherCategories.map((c) => c['name'] as String),
                         ].map((cat) {
                           final isSelected = filterState.category == cat;
                           return InkWell(

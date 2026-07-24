@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../widgets/cached_image.dart';
 import '../../products/providers/product_providers.dart';
@@ -59,9 +60,16 @@ class _ImageGalleryScreenState extends ConsumerState<ImageGalleryScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.share, color: Colors.white),
-            onPressed: () {
+            onPressed: () async {
+              final shareUrl = Uri.base.origin.startsWith('http')
+                  ? '${Uri.base.origin}/#/product/${widget.productId}'
+                  : 'https://acetechnologies.com/product/${widget.productId}';
+              await Clipboard.setData(ClipboardData(text: shareUrl));
+              if (!context.mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Share link copied!')),
+                SnackBar(
+                  content: Text('Product link copied to clipboard: $shareUrl'),
+                ),
               );
             },
           ),

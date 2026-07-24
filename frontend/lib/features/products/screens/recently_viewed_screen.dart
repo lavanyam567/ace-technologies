@@ -87,7 +87,7 @@ class RecentlyViewedScreen extends ConsumerWidget {
       itemBuilder: (context, index) {
         final product = recentlyViewed[index];
         return GestureDetector(
-          onTap: () => context.go('/product/${product.id}'),
+          onTap: () => context.push('/product/${product.id}'),
           child: Container(
             decoration: BoxDecoration(
               color: Colors.white,

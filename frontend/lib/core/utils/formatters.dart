@@ -1,6 +1,26 @@
 /// Currency formatting utilities
 class CurrencyUtils {
-  static const String _currencySymbol = '₹';
+  static String get currencySymbol => _selectedCurrencySymbol;
+  static double get exchangeRate => _selectedExchangeRate;
+
+  static String _selectedCurrencySymbol = '₹';
+  static double _selectedExchangeRate = 1.0;
+
+  static void updateCurrency(String currency) {
+    if (currency.contains('USD') || currency.contains('\$') && !currency.contains('S\$')) {
+      _selectedCurrencySymbol = '\$';
+      _selectedExchangeRate = 1 / 83.0;
+    } else if (currency.contains('SGD') || currency.contains('S\$')) {
+      _selectedCurrencySymbol = 'S\$';
+      _selectedExchangeRate = 1 / 62.0;
+    } else if (currency.contains('GBP') || currency.contains('£')) {
+      _selectedCurrencySymbol = '£';
+      _selectedExchangeRate = 1 / 107.0;
+    } else {
+      _selectedCurrencySymbol = '₹';
+      _selectedExchangeRate = 1.0;
+    }
+  }
 
   /// Format price with proper currency symbol
   /// Handles null prices safely - never shows ₹NaN
@@ -8,7 +28,8 @@ class CurrencyUtils {
     if (price == null || price.isNaN || price.isInfinite) {
       return 'Contact for price';
     }
-    return '$_currencySymbol${price.toStringAsFixed(0)}';
+    final convertedPrice = price * _selectedExchangeRate;
+    return '$_selectedCurrencySymbol${convertedPrice.toStringAsFixed(0)}';
   }
 
   /// Format price with decimal places
@@ -16,7 +37,8 @@ class CurrencyUtils {
     if (price == null || price.isNaN || price.isInfinite) {
       return 'Contact for price';
     }
-    return '$_currencySymbol${price.toStringAsFixed(decimals)}';
+    final convertedPrice = price * _selectedExchangeRate;
+    return '$_selectedCurrencySymbol${convertedPrice.toStringAsFixed(decimals)}';
   }
 
   /// Get price label - returns "Contact for price" if null

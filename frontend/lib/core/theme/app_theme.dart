@@ -1,6 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+bool _isDarkTheme = false;
+
+class ThemeColor extends Color {
+  final Color lightColor;
+  final Color darkColor;
+
+  const ThemeColor(this.lightColor, this.darkColor, int defaultValue) : super(defaultValue);
+
+  @override
+  int get value => _isDarkTheme ? darkColor.value : lightColor.value;
+}
+
 class AppTheme {
   // Primary Colors
   static const Color primaryColor = Color(0xFF00897B); // Teal
@@ -8,13 +20,13 @@ class AppTheme {
   static const Color primaryLight = Color(0xFF4DB6AC);
 
   // Background Colors
-  static const Color backgroundColor = Color(0xFFF5F7FA);
-  static const Color cardColor = Colors.white;
+  static const Color backgroundColor = ThemeColor(Color(0xFFF5F7FA), darkBackground, 0xFFF5F7FA);
+  static const Color cardColor = ThemeColor(Colors.white, Color(0xFF252542), 0xFFFFFFFF);
   static const Color darkBackground = Color(0xFF1A1A2E);
 
   // Text Colors
-  static const Color textPrimary = Color(0xFF1A1A2E);
-  static const Color textSecondary = Color(0xFF6B7280);
+  static const Color textPrimary = ThemeColor(Color(0xFF1A1A2E), Colors.white, 0xFF1A1A2E);
+  static const Color textSecondary = ThemeColor(Color(0xFF6B7280), Color(0xFFB0B0B0), 0xFF6B7280);
   static const Color textLight = Colors.white;
 
   // Accent Colors
@@ -23,6 +35,10 @@ class AppTheme {
   static const Color successColor = Color(0xFF43A047);
   static const Color warningColor = Color(0xFFFFA726);
   static const Color infoColor = Color(0xFF1E88E5);
+
+  static void updateThemeMode(ThemeMode mode) {
+    _isDarkTheme = mode == ThemeMode.dark;
+  }
 
   static ThemeData get lightTheme {
     return ThemeData(

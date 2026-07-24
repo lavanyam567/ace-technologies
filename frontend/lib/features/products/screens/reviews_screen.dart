@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../models/review_model.dart';
+import '../../../models/recommendation_model.dart';
+import '../../../widgets/sentiment_badge.dart';
 import '../../products/providers/product_providers.dart';
 import '../../products/providers/review_provider.dart';
 
@@ -35,7 +37,7 @@ class ReviewsScreen extends ConsumerWidget {
         ),
         actions: [
           TextButton.icon(
-            onPressed: () => context.go('/product/$productId/write-review'),
+            onPressed: () => context.push('/product/$productId/write-review'),
             icon: const Icon(Icons.rate_review),
             label: const Text('Write Review'),
           ),
@@ -278,6 +280,14 @@ class ReviewsScreen extends ConsumerWidget {
                             color: Colors.grey.shade500,
                           ),
                         ),
+                        if (review.sentiment != null) ...[
+                          const SizedBox(width: 8),
+                          SentimentBadge(
+                            sentiment: SentimentType.fromString(review.sentiment!),
+                            score: review.sentimentScore,
+                            compact: true,
+                          ),
+                        ],
                       ],
                     ),
                   ],

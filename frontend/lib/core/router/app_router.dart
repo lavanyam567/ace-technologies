@@ -36,7 +36,9 @@ import '../../features/account/screens/login_screen.dart';
 import '../../features/account/screens/signup_screen.dart';
 import '../../features/account/screens/profile_screen.dart';
 import '../../features/account/screens/settings_screen.dart';
-import '../../features/admin/screens/admin_orders_screen.dart';
+import '../../features/admin/screens/admin_dashboard_screen.dart';
+import '../../features/admin/screens/feedback_analysis_screen.dart';
+import '../../features/providers/auth_provider.dart';
 import '../../features/support/noupe_chat_screen.dart';
 import '../responsive/responsive_config.dart';
 import '../responsive/adaptive_navigation.dart';
@@ -83,25 +85,24 @@ class AppRoutes {
   static const String profile = '/profile';
   static const String settings = '/settings';
   static const String adminOrders = '/admin/orders';
+  static const String adminFeedback = '/admin/feedback';
   static const String noupeChat = '/noupe-chat';
 }
 
 /// Navigation shell with responsive navigation (bottom nav for mobile, sidebar for web)
-class MainNavigationShell extends StatefulWidget {
+class MainNavigationShell extends ConsumerStatefulWidget {
   final Widget child;
-  final int currentIndex;
 
   const MainNavigationShell({
     super.key,
     required this.child,
-    required this.currentIndex,
   });
 
   @override
-  State<MainNavigationShell> createState() => _MainNavigationShellState();
+  ConsumerState<MainNavigationShell> createState() => _MainNavigationShellState();
 }
 
-class _MainNavigationShellState extends State<MainNavigationShell> {
+class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
   late bool _sidebarExpanded;
 
   @override
@@ -114,45 +115,85 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
   Widget build(BuildContext context) {
     final isWebLayout = context.isWebLayout;
     final currentRoute = GoRouterState.of(context).uri.toString();
+    final auth = ref.watch(authProvider);
+    final isAdmin = auth.isAdmin;
 
-    final navItems = [
-      NavItem(
-        label: 'Home',
-        icon: Icons.home_outlined,
-        route: AppRoutes.home,
-        isActive: currentRoute == '/',
-      ),
-      NavItem(
-        label: 'Products',
-        icon: Icons.shopping_bag_outlined,
-        route: AppRoutes.products,
-        isActive: currentRoute.startsWith('/products'),
-      ),
-      NavItem(
-        label: 'Services',
-        icon: Icons.build_outlined,
-        route: AppRoutes.services,
-        isActive: currentRoute.startsWith('/services'),
-      ),
-      NavItem(
-        label: 'About Us',
-        icon: Icons.info_outline,
-        route: AppRoutes.about,
-        isActive: currentRoute.startsWith('/about'),
-      ),
-      NavItem(
-        label: 'Cart',
-        icon: Icons.shopping_cart_outlined,
-        route: AppRoutes.cart,
-        isActive: currentRoute.startsWith('/cart'),
-      ),
-      NavItem(
-        label: 'Account',
-        icon: Icons.person_outline,
-        route: AppRoutes.account,
-        isActive: currentRoute.startsWith('/account'),
-      ),
-    ];
+    final int currentIndex;
+    if (isAdmin) {
+      if (currentRoute.startsWith('/account')) {
+        currentIndex = 1;
+      } else {
+        currentIndex = 0;
+      }
+    } else {
+      if (currentRoute.startsWith('/products')) {
+        currentIndex = 1;
+      } else if (currentRoute.startsWith('/services')) {
+        currentIndex = 2;
+      } else if (currentRoute.startsWith('/about')) {
+        currentIndex = 3;
+      } else if (currentRoute.startsWith('/cart')) {
+        currentIndex = 4;
+      } else if (currentRoute.startsWith('/account')) {
+        currentIndex = 5;
+      } else {
+        currentIndex = 0;
+      }
+    }
+
+    final navItems = isAdmin
+        ? [
+            NavItem(
+              label: 'Admin Console',
+              icon: Icons.admin_panel_settings_outlined,
+              route: AppRoutes.adminOrders,
+              isActive: currentRoute.startsWith('/admin/orders'),
+            ),
+            NavItem(
+              label: 'Account',
+              icon: Icons.person_outline,
+              route: AppRoutes.account,
+              isActive: currentRoute.startsWith('/account'),
+            ),
+          ]
+        : [
+            NavItem(
+              label: 'Home',
+              icon: Icons.home_outlined,
+              route: AppRoutes.home,
+              isActive: currentRoute == '/',
+            ),
+            NavItem(
+              label: 'Products',
+              icon: Icons.shopping_bag_outlined,
+              route: AppRoutes.products,
+              isActive: currentRoute.startsWith('/products'),
+            ),
+            NavItem(
+              label: 'Services',
+              icon: Icons.build_outlined,
+              route: AppRoutes.services,
+              isActive: currentRoute.startsWith('/services'),
+            ),
+            NavItem(
+              label: 'About Us',
+              icon: Icons.info_outline,
+              route: AppRoutes.about,
+              isActive: currentRoute.startsWith('/about'),
+            ),
+            NavItem(
+              label: 'Cart',
+              icon: Icons.shopping_cart_outlined,
+              route: AppRoutes.cart,
+              isActive: currentRoute.startsWith('/cart'),
+            ),
+            NavItem(
+              label: 'Account',
+              icon: Icons.person_outline,
+              route: AppRoutes.account,
+              isActive: currentRoute.startsWith('/account'),
+            ),
+          ];
 
     if (isWebLayout) {
       // Desktop/Tablet Layout with Sidebar
@@ -176,70 +217,101 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
       );
     } else {
       // Mobile Layout with Bottom Navigation
-      return Scaffold(
-        body: widget.child,
-        floatingActionButton: FloatingActionButton(
-          onPressed: () => context.push(AppRoutes.noupeChat),
-          tooltip: 'Chat with Ace AI',
-          child: const Icon(Icons.chat_bubble_outline),
-        ),
-        bottomNavigationBar: BottomNavigationBar(
-          currentIndex: widget.currentIndex,
-          type: BottomNavigationBarType.fixed,
-          onTap: (index) {
-            switch (index) {
-              case 0:
-                context.go(AppRoutes.home);
-                break;
-              case 1:
-                context.go(AppRoutes.products);
-                break;
-              case 2:
-                context.go(AppRoutes.services);
-                break;
-              case 3:
-                context.go(AppRoutes.about);
-                break;
-              case 4:
-                context.go(AppRoutes.cart);
-                break;
-              case 5:
-                context.go(AppRoutes.account);
-                break;
-            }
-          },
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home_outlined),
-              activeIcon: Icon(Icons.home),
-              label: 'Home',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.shopping_bag_outlined),
-              activeIcon: Icon(Icons.shopping_bag),
-              label: 'Products',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.build_outlined),
-              activeIcon: Icon(Icons.build),
-              label: 'Services',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.info_outline),
-              activeIcon: Icon(Icons.info),
-              label: 'About Us',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.shopping_cart_outlined),
-              activeIcon: Icon(Icons.shopping_cart),
-              label: 'Cart',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline),
-              activeIcon: Icon(Icons.person),
-              label: 'Account',
-            ),
-          ],
+      return PopScope(
+        canPop: currentIndex == 0,
+        onPopInvoked: (didPop) {
+          if (didPop) return;
+          context.go(isAdmin ? AppRoutes.adminOrders : AppRoutes.home);
+        },
+        child: Scaffold(
+          body: widget.child,
+          floatingActionButton: isAdmin ? null : FloatingActionButton(
+            onPressed: () => context.push(AppRoutes.noupeChat),
+            tooltip: 'Chat with Ace AI',
+            child: const Icon(Icons.chat_bubble_outline),
+          ),
+          bottomNavigationBar: BottomNavigationBar(
+            currentIndex: currentIndex,
+            type: BottomNavigationBarType.fixed,
+            onTap: (index) {
+              if (isAdmin) {
+                switch (index) {
+                  case 0:
+                    context.go(AppRoutes.adminOrders);
+                    break;
+                  case 1:
+                    context.go(AppRoutes.account);
+                    break;
+                }
+              } else {
+                switch (index) {
+                  case 0:
+                    context.go(AppRoutes.home);
+                    break;
+                  case 1:
+                    context.go(AppRoutes.products);
+                    break;
+                  case 2:
+                    context.go(AppRoutes.services);
+                    break;
+                  case 3:
+                    context.go(AppRoutes.about);
+                    break;
+                  case 4:
+                    context.go(AppRoutes.cart);
+                    break;
+                  case 5:
+                    context.go(AppRoutes.account);
+                    break;
+                }
+              }
+            },
+            items: isAdmin
+                ? const [
+                    BottomNavigationBarItem(
+                      icon: Icon(Icons.admin_panel_settings_outlined),
+                      activeIcon: Icon(Icons.admin_panel_settings),
+                      label: 'Admin Console',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Icon(Icons.person_outline),
+                      activeIcon: Icon(Icons.person),
+                      label: 'Account',
+                    ),
+                  ]
+                : const [
+                    BottomNavigationBarItem(
+                      icon: Icon(Icons.home_outlined),
+                      activeIcon: Icon(Icons.home),
+                      label: 'Home',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Icon(Icons.shopping_bag_outlined),
+                      activeIcon: Icon(Icons.shopping_bag),
+                      label: 'Products',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Icon(Icons.build_outlined),
+                      activeIcon: Icon(Icons.build),
+                      label: 'Services',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Icon(Icons.info_outline),
+                      activeIcon: Icon(Icons.info),
+                      label: 'About Us',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Icon(Icons.shopping_cart_outlined),
+                      activeIcon: Icon(Icons.shopping_cart),
+                      label: 'Cart',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Icon(Icons.person_outline),
+                      activeIcon: Icon(Icons.person),
+                      label: 'Account',
+                    ),
+                  ],
+          ),
         ),
       );
     }
@@ -277,7 +349,6 @@ GoRouter _createRouter() {
       ShellRoute(
         builder: (context, state, child) {
           return MainNavigationShell(
-            currentIndex: _calculateIndex(state.uri.path),
             child: child,
           );
         },
@@ -343,6 +414,12 @@ GoRouter _createRouter() {
             path: AppRoutes.account,
             pageBuilder: (context, state) =>
                 const NoTransitionPage(child: AccountScreen()),
+          ),
+          // Admin orders tab
+          GoRoute(
+            path: AppRoutes.adminOrders,
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: AdminDashboardScreen()),
           ),
         ],
       ),
@@ -416,6 +493,10 @@ GoRouter _createRouter() {
         path: AppRoutes.noupeChat,
         builder: (context, state) => const NoupeChatScreen(),
       ),
+      GoRoute(
+        path: AppRoutes.adminFeedback,
+        builder: (context, state) => const FeedbackAnalysisScreen(),
+      ),
 
       // Checkout flow
       GoRoute(
@@ -480,19 +561,6 @@ GoRouter _createRouter() {
         path: AppRoutes.settings,
         builder: (context, state) => const SettingsScreen(),
       ),
-      GoRoute(
-        path: AppRoutes.adminOrders,
-        builder: (context, state) => const AdminOrdersScreen(),
-      ),
     ],
   );
-}
-
-int _calculateIndex(String path) {
-  if (path.startsWith('/products')) return 1;
-  if (path.startsWith('/services')) return 2;
-  if (path.startsWith('/about')) return 3;
-  if (path.startsWith('/cart')) return 4;
-  if (path.startsWith('/account')) return 5;
-  return 0;
 }
