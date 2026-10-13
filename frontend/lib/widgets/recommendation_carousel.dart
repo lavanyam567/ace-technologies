@@ -266,7 +266,7 @@ class _RecommendationCardState extends State<_RecommendationCard> {
           width: 148,
           margin: const EdgeInsets.only(right: 12),
           transform: _hovered
-              ? (Matrix4.identity()..translate(0.0, -4.0, 0.0))
+              ? Matrix4.translationValues(0.0, -4.0, 0.0)
               : Matrix4.identity(),
           decoration: BoxDecoration(
             color: AppTheme.cardColor,

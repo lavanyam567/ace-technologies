@@ -1,6 +1,6 @@
 param(
-  [string]$BaseUrl = "https://bjjvvqlztmfjskxsykmz.supabase.co",
-  [string]$AnonKey = "sb_publishable_SnFXOvSnXEqQ_3cLPVX0lw_4zqjwyyf"
+  [string]$BaseUrl = "https://lreciaijqvxjihmgwfts.supabase.co",
+  [string]$AnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxyZWNpYWlqcXZ4amlobWd3ZnRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE5MDkyMTUsImV4cCI6MjEwNzQ4NTIxNX0.OhKnjrBpMKNAkt7duZIiJ_BGay7VM-fIWR0Jes-BLdA"
 )
 
 $ErrorActionPreference = "Stop"

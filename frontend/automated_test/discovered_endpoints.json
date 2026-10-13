@@ -1,27 +1,27 @@
 ﻿{
-    "baseUrl":  "https://bjjvvqlztmfjskxsykmz.supabase.co",
-    "generatedAt":  "2026-06-11T08:35:01.0065221Z",
+    "baseUrl":  "https://lreciaijqvxjihmgwfts.supabase.co",
+    "generatedAt":  "2026-10-13T17:12:38.0967520Z",
     "specProbeResults":  [
                              {
-                                 "url":  "https://bjjvvqlztmfjskxsykmz.supabase.co/rest/v1/",
+                                 "url":  "https://lreciaijqvxjihmgwfts.supabase.co/rest/v1/",
                                  "reachable":  true,
                                  "status":  401,
                                  "note":  "The remote server returned an error: (401) Unauthorized."
                              },
                              {
-                                 "url":  "https://bjjvvqlztmfjskxsykmz.supabase.co/swagger.json",
+                                 "url":  "https://lreciaijqvxjihmgwfts.supabase.co/swagger.json",
                                  "reachable":  true,
                                  "status":  404,
                                  "note":  "The remote server returned an error: (404) Not Found."
                              },
                              {
-                                 "url":  "https://bjjvvqlztmfjskxsykmz.supabase.co/v3/api-docs",
+                                 "url":  "https://lreciaijqvxjihmgwfts.supabase.co/v3/api-docs",
                                  "reachable":  true,
                                  "status":  404,
                                  "note":  "The remote server returned an error: (404) Not Found."
                              },
                              {
-                                 "url":  "https://bjjvvqlztmfjskxsykmz.supabase.co/functions/v1/",
+                                 "url":  "https://lreciaijqvxjihmgwfts.supabase.co/functions/v1/",
                                  "reachable":  true,
                                  "status":  404,
                                  "note":  "The remote server returned an error: (404) Not Found."

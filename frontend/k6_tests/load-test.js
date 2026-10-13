@@ -9,8 +9,8 @@ export const options = {
   ],
 };
 
-const SUPABASE_URL = "https://bjjvvqlztmfjskxsykmz.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_SnFXOvSnXEqQ_3cLPVX0lw_4zqjwyyf";
+const SUPABASE_URL = "https://lreciaijqvxjihmgwfts.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxyZWNpYWlqcXZ4amlobWd3ZnRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE5MDkyMTUsImV4cCI6MjEwNzQ4NTIxNX0.OhKnjrBpMKNAkt7duZIiJ_BGay7VM-fIWR0Jes-BLdA";
 
 export default function () {
   const res = http.get(`${SUPABASE_URL}/rest/v1/products?select=*`, {

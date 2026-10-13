@@ -114,7 +114,7 @@ class SentimentOverviewCard extends ConsumerWidget {
 
     return summaryAsync.when(
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (err, stack) => const SizedBox.shrink(),
       data: (summary) {
         if (summary.isEmpty) return const SizedBox.shrink();
 

@@ -62,23 +62,35 @@ Deno.serve(async (req) => {
     }
 
     // ── Call HuggingFace Inference API ──────────────────────────────
-    const hfResponse = await fetch(
-      `https://api-inference.huggingface.co/models/${HF_MODEL}`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${hfKey}`,
-          "Content-Type": "application/json",
+    let useLexicon = false;
+    let hfData: any = null;
+
+    try {
+      const hfResponse = await fetch(
+        `https://router.huggingface.co/hf-inference/models/${HF_MODEL}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${hfKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ inputs: text.slice(0, 512) }),
         },
-        body: JSON.stringify({ inputs: text.slice(0, 512) }),
-      },
-    );
+      );
 
-    if (!hfResponse.ok) {
-      // Model may be loading (cold start). Fall back to simple scoring.
-      const errText = await hfResponse.text();
-      console.warn("HuggingFace error, using lexicon fallback:", errText);
+      if (!hfResponse.ok) {
+        const errText = await hfResponse.text();
+        console.warn("HuggingFace non-ok response, using lexicon fallback:", errText);
+        useLexicon = true;
+      } else {
+        hfData = await hfResponse.json();
+      }
+    } catch (netErr) {
+      console.warn("HuggingFace network exception, using lexicon fallback:", netErr);
+      useLexicon = true;
+    }
 
+    if (useLexicon || !hfData) {
       // Lexicon fallback
       const lowerText = text.toLowerCase();
       const posScore = [
@@ -113,7 +125,6 @@ Deno.serve(async (req) => {
 
     // ── Parse HuggingFace response ──────────────────────────────────
     // Response format: [[{label, score}, {label, score}]]
-    const hfData = await hfResponse.json();
     const predictions = Array.isArray(hfData[0]) ? hfData[0] : hfData;
     const top = predictions.reduce(
       (best: { label: string; score: number }, cur: { label: string; score: number }) =>
